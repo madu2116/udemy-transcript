@@ -1,0 +1,14 @@
+# Dữ liệu người dùng: token đăng nhập + nội dung khoá học đã tải (bản quyền) — KHÔNG commit
+data/
+
+# Bản build Windows portable (~60 MB) và cache Python embeddable
+windows-portable/dist/
+windows-portable/.cache/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Log bản portable
+app.log

@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Udemy Transcript</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #fff; --text: #1d2330; --muted: #6b7385; --border: #e2e5ea;
+    --accent: #a435f0; --accent-ink: #fff; --ok: #1e8e3e; --warn: #b26a00; --err: #c5221f;
+    --code: #f0f1f4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14161b; --panel: #1d2027; --text: #e6e8ec; --muted: #9aa1b0; --border: #2e323b;
+      --accent: #c27cf6; --accent-ink: #14161b; --ok: #5fcf80; --warn: #f0b45a; --err: #f28b82;
+      --code: #262a33;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 900px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 15px; margin: 0 0 12px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  input[type=text], input[type=password] { flex: 1 1 320px; min-width: 0; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font: inherit; }
+  button { padding: 8px 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--panel); color: var(--text); font: inherit; cursor: pointer; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  button:disabled { opacity: .5; cursor: default; }
+  label.chk { display: inline-flex; gap: 6px; align-items: center; margin-right: 12px; }
+  .muted { color: var(--muted); }
+  .ok { color: var(--ok); } .warn { color: var(--warn); } .err { color: var(--err); }
+  details summary { cursor: pointer; color: var(--muted); margin-top: 10px; }
+  details ol { margin: 8px 0 0; padding-left: 20px; color: var(--muted); }
+  code { background: var(--code); padding: 1px 5px; border-radius: 4px; }
+  .bar { height: 8px; background: var(--code); border-radius: 4px; overflow: hidden; margin: 10px 0; }
+  .bar > div { height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+  pre.log { background: var(--code); border-radius: 6px; padding: 10px; max-height: 260px; overflow: auto; font: 12px/1.45 ui-monospace, Consolas, monospace; white-space: pre-wrap; margin: 0; }
+  .course { border-top: 1px solid var(--border); padding: 12px 0; }
+  .course:first-of-type { border-top: 0; padding-top: 0; }
+  .course .title { font-weight: 600; }
+  .course .links { margin-top: 6px; display: flex; gap: 12px; flex-wrap: wrap; }
+  a { color: var(--accent); }
+  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 10px; background: var(--code); margin-right: 6px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="row" style="justify-content:space-between">
+    <h1>Udemy Transcript</h1>
+    <div class="row" id="portableBar" hidden>
+      <button id="openData" title="Mở thư mục chứa các khoá đã tải">📂 Thư mục dữ liệu</button>
+      <button id="shutdownBtn" title="Tắt hẳn ứng dụng (bản portable)">⏻ Tắt ứng dụng</button>
+    </div>
+  </div>
+  <p class="sub">Dán URL khoá Udemy đã mua → tải tổng quan khoá, transcript (.txt + .srt), 1 file gộp toàn khoá cho từng ngôn ngữ, và file đính kèm của bài.</p>
+
+  <section class="panel">
+    <h2>Đăng nhập Udemy</h2>
+    <div id="tokenStatus" class="muted">Đang kiểm tra...</div>
+    <div class="row" style="margin-top:10px">
+      <input type="password" id="tokenInput" placeholder="Dán cookie access_token (hoặc nguyên chuỗi Cookie header)" autocomplete="off">
+      <button id="saveToken">Lưu</button>
+      <button id="checkToken">Kiểm tra</button>
+      <button id="clearToken" title="Xoá token đã lưu qua web, quay về dùng .env">Xoá</button>
+    </div>
+    <details>
+      <summary>Lấy access_token thế nào?</summary>
+      <ol>
+        <li>Mở <code>udemy.com</code> trên trình duyệt, đăng nhập.</li>
+        <li>Bấm F12 → tab <b>Application</b> (Chrome/Edge) hoặc <b>Storage</b> (Firefox) → Cookies → <code>https://www.udemy.com</code>.</li>
+        <li>Tìm dòng <code>access_token</code>, copy cột <b>Value</b> và dán vào ô trên.</li>
+        <li>Nếu bị báo Cloudflare chặn: tab <b>Network</b> → bấm 1 request tới udemy.com → copy nguyên giá trị header <code>Cookie</code> và dán vào.</li>
+      </ol>
+    </details>
+  </section>
+
+  <section class="panel">
+    <h2>Tải transcript</h2>
+    <form id="jobForm" class="row">
+      <input type="text" id="urlInput" placeholder="https://www.udemy.com/course/ten-khoa-hoc/" required>
+      <button type="submit" class="primary" id="startBtn">Tải</button>
+    </form>
+    <div class="row" style="margin-top:10px">
+      <span class="muted">Ngôn ngữ:</span>
+      <label class="chk"><input type="checkbox" name="lang" value="en" checked> English</label>
+      <label class="chk"><input type="checkbox" name="lang" value="vi" checked> Tiếng Việt</label>
+      <input type="text" id="extraLangs" placeholder="khác, vd: ja,ko" style="flex:0 1 140px">
+      <label class="chk"><input type="checkbox" id="resources" checked> Tải tài nguyên đính kèm (pdf, docx...)</label>
+      <label class="chk"><input type="checkbox" id="force"> Tải lại bài đã có</label>
+    </div>
+    <div id="jobBox" hidden style="margin-top:14px">
+      <div id="jobHead"></div>
+      <div class="bar"><div id="jobBar"></div></div>
+      <pre class="log" id="jobLog"></pre>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Khoá đã tải</h2>
+    <div id="courses" class="muted">Chưa có khoá nào.</div>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, { headers: { "Content-Type": "application/json", "X-Requested-With": "udemy-transcript" }, ...opts });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+  return data;
+}
+
+function renderToken(t) {
+  const src = { web: "lưu qua web", env: "từ .env", none: "" }[t.source];
+  let html;
+  if (!t.configured) html = `<span class="warn">Chưa có token.</span> Dán cookie <code>access_token</code> bên dưới.`;
+  else if (t.valid === true) html = `<span class="ok">✓ Đã đăng nhập: ${esc(t.user || "OK")}</span> <span class="muted">(${src})</span>`;
+  else if (t.valid === false) html = `<span class="err">✗ ${esc(t.error)}</span> <span class="muted">(${src})</span>`;
+  else html = `Đã có token <span class="muted">(${src})</span> — bấm Kiểm tra để xác nhận.`;
+  $("tokenStatus").innerHTML = html;
+}
+
+async function refreshToken(check) {
+  try { renderToken(await api(`/api/token${check ? "?check=1" : ""}`)); }
+  catch (e) { $("tokenStatus").innerHTML = `<span class="err">${esc(e.message)}</span>`; }
+}
+
+$("saveToken").onclick = async () => {
+  const token = $("tokenInput").value.trim();
+  if (!token) return;
+  $("tokenStatus").textContent = "Đang kiểm tra...";
+  try { renderToken(await api("/api/token", { method: "POST", body: JSON.stringify({ token }) })); $("tokenInput").value = ""; }
+  catch (e) { $("tokenStatus").innerHTML = `<span class="err">${esc(e.message)}</span>`; }
+};
+$("checkToken").onclick = () => { $("tokenStatus").textContent = "Đang kiểm tra..."; refreshToken(true); };
+$("clearToken").onclick = async () => renderToken(await api("/api/token", { method: "DELETE" }));
+
+function selectedLangs() {
+  const langs = [...document.querySelectorAll('input[name=lang]:checked')].map((x) => x.value);
+  for (const x of $("extraLangs").value.split(",")) if (x.trim()) langs.push(x.trim().toLowerCase());
+  return [...new Set(langs)];
+}
+
+let pollTimer = null;
+$("jobForm").onsubmit = async (ev) => {
+  ev.preventDefault();
+  const langs = selectedLangs();
+  if (!langs.length) return alertBox("Chọn ít nhất 1 ngôn ngữ");
+  try {
+    const job = await api("/api/jobs", { method: "POST", body: JSON.stringify({ url: $("urlInput").value, langs, force: $("force").checked, resources: $("resources").checked }) });
+    watchJob(job.id);
+  } catch (e) { alertBox(e.message); }
+};
+
+function alertBox(msg) {
+  $("jobBox").hidden = false;
+  $("jobHead").innerHTML = `<span class="err">${esc(msg)}</span>`;
+  $("jobBar").style.width = "0";
+  $("jobLog").textContent = "";
+}
+
+function watchJob(id) {
+  clearInterval(pollTimer);
+  $("jobBox").hidden = false;
+  const tick = async () => {
+    let job;
+    try { job = await api(`/api/jobs/${id}`); } catch { return; }
+    const label = { queued: "Đang chờ...", running: "Đang tải...", done: "Xong", error: "Lỗi" }[job.status];
+    const cls = { done: "ok", error: "err" }[job.status] || "";
+    const count = job.total ? ` — ${job.done}/${job.total} file` : "";
+    $("jobHead").innerHTML = `<b class="${cls}">${label}</b> <span class="muted">${esc(job.slug)}${count}</span>`;
+    $("jobBar").style.width = job.status === "done" ? "100%" : (job.total ? `${(100 * job.done / job.total).toFixed(1)}%` : "0");
+    const log = $("jobLog");
+    const atBottom = log.scrollTop + log.clientHeight >= log.scrollHeight - 4;
+    log.textContent = job.logs.join("\n");
+    if (atBottom) log.scrollTop = log.scrollHeight;
+    $("startBtn").disabled = job.status === "queued" || job.status === "running";
+    if (job.status === "done" || job.status === "error") { clearInterval(pollTimer); loadCourses(); }
+  };
+  tick();
+  pollTimer = setInterval(tick, 1500);
+}
+
+async function loadCourses() {
+  const list = await api("/api/courses").catch(() => []);
+  if (!list.length) { $("courses").innerHTML = "Chưa có khoá nào."; return; }
+  $("courses").classList.remove("muted");
+  $("courses").innerHTML = list.map((c) => {
+    const slug = encodeURIComponent(c.slug);
+    const pills = c.langs.map((l) => {
+      const s = c.stats[l];
+      return `<span class="pill">${esc(l)}: ${c.combined[l] || 0}/${c.lecture_count}${s.auto ? ` (${s.auto} auto)` : ""}</span>`;
+    }).join("");
+    const r = c.resources;
+    const resPill = r && (r.files || r.links)
+      ? `<span class="pill">📎 ${r.downloaded + r.skipped}/${r.files} file${r.links ? ` · ${r.links} link` : ""}${r.failed ? ` · <span class="err">${r.failed} lỗi</span>` : ""}</span>` : "";
+    const view = `/view/${slug}/`;
+    const read = c.html ? `<a href="${view}" target="_blank"><b>📖 Đọc trên trình duyệt</b></a>` : "";
+    const overview = c.html && c.overview ? `<a href="${view}overview.html" target="_blank">Tổng quan</a>` : "";
+    const links = read + overview + c.langs.filter((l) => c.combined[l]).map((l) =>
+      (c.html ? `<a href="${view}transcript.${l}.html" target="_blank">Xem ${esc(l)}</a>` : "") +
+      `<a href="/api/courses/${slug}/transcript/${l}?download=1">Tải ${esc(l)}.md</a>`).join("");
+    const when = new Date(c.updated_at * 1000).toLocaleString("vi-VN");
+    return `<div class="course">
+      <div class="title">${esc(c.title)}</div>
+      ${c.headline ? `<div>${esc(c.headline)}</div>` : ""}
+      <div class="muted">${c.chapter_count} chương · ${c.lecture_count} bài video · cập nhật ${when}</div>
+      <div style="margin-top:6px">${pills}${resPill}</div>
+      <div class="links">${links}<a href="/api/courses/${slug}/zip">Tải zip (transcript + tài nguyên)</a>
+        ${portable ? `<a href="#" data-slug="${esc(c.slug)}" class="open-folder">📂 Mở thư mục</a>` : ""}
+        <a href="#" data-url="${esc(c.url)}" class="reload">Cập nhật</a></div>
+    </div>`;
+  }).join("");
+  for (const a of document.querySelectorAll("a.open-folder")) a.onclick = (ev) => {
+    ev.preventDefault();
+    api(`/api/open-folder?slug=${encodeURIComponent(a.dataset.slug)}`, { method: "POST" }).catch((e) => alertBox(e.message));
+  };
+  for (const a of document.querySelectorAll("a.reload")) a.onclick = (ev) => {
+    ev.preventDefault();
+    $("urlInput").value = a.dataset.url;
+    $("jobForm").requestSubmit();
+  };
+}
+
+let portable = false;
+$("openData").onclick = () => api("/api/open-folder", { method: "POST" }).catch((e) => alertBox(e.message));
+$("shutdownBtn").onclick = async () => {
+  const busy = (await api("/api/jobs").catch(() => [])).some((j) => j.status === "running" || j.status === "queued");
+  if (!confirm(busy ? "Đang có khoá đang tải — tắt bây giờ sẽ dừng giữa chừng (lần sau chạy lại sẽ tải tiếp phần còn thiếu). Vẫn tắt?" : "Tắt ứng dụng?")) return;
+  await api("/api/shutdown", { method: "POST" }).catch(() => {});
+  document.body.innerHTML = '<main><h1>Đã tắt Udemy Transcript</h1><p class="sub">Có thể đóng tab này. Muốn mở lại: double-click <b>UdemyTranscript.vbs</b>.</p></main>';
+};
+
+(async () => {
+  const info = await api("/api/app-info").catch(() => ({}));
+  portable = !!info.portable;
+  $("portableBar").hidden = !portable;
+  refreshToken(true);
+  loadCourses();
+  const running = (await api("/api/jobs").catch(() => [])).find((j) => j.status === "running" || j.status === "queued");
+  if (running) watchJob(running.id);
+})();
+</script>
+</body>
+</html>
