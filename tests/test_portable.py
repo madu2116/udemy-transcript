@@ -181,3 +181,60 @@ def test_launcher_no_dialog_in_test_mode(tmp_path, monkeypatch):
     monkeypatch.setenv("NO_BROWSER", "1")
     launcher.warn_long_root()
     assert (tmp_path / ".long-path-warned").exists()
+
+
+# ── build_portable: không phá bản portable đang chạy ────────
+
+def _build_module():
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "windows-portable"))
+    import build_portable
+    return build_portable
+
+
+def test_build_stages_outside_dist():
+    """Hồi quy: dựng gói ngay trong dist/ → user chạy thử từ đó → build sau xoá mất app/ của bản đang chạy."""
+    bp = _build_module()
+    assert bp.OUT.parent.name == "build" and bp.DIST not in bp.OUT.parents
+    assert list(bp.PORTABLE_PORTS) == list(launcher.PORT_RANGE)
+
+
+def test_find_running_build(tmp_path):
+    bp = _build_module()
+    out = tmp_path / "build" / "UdemyTranscript"
+    infos = {8098: {"app": "udemy-transcript", "portable": True, "data_dir": str(out / "data").upper()},
+             8097: {"app": "udemy-transcript", "portable": True, "data_dir": r"D:\elsewhere\data"}}
+    assert bp.find_running_build(out, fetch=infos.get) == 8098
+    assert bp.find_running_build(out, fetch={8097: infos[8097]}.get) is None  # bản chạy ở chỗ khác: không cản build
+    assert bp.find_running_build(out, fetch=lambda p: {"app": "other", "data_dir": str(out)}) is None
+    assert bp.find_running_build(out, fetch=lambda p: None) is None
+
+
+def test_copy_app_does_not_delete_when_locked(tmp_path, monkeypatch):
+    """Thư mục app/ bị khoá → dừng TRƯỚC khi xoá file nào (rename thất bại trước)."""
+    bp = _build_module()
+    out = tmp_path / "UdemyTranscript"
+    (out / "app" / "static").mkdir(parents=True)
+    (out / "app" / "main.py").write_text("old", encoding="utf-8")
+    monkeypatch.setattr(bp, "OUT", out)
+    real_rename = Path.rename
+
+    def locked(self, target):
+        if self.name == "app":
+            raise PermissionError(32, "The process cannot access the file because it is being used by another process")
+        return real_rename(self, target)
+    monkeypatch.setattr(Path, "rename", locked)
+    with pytest.raises(SystemExit, match="đang bị dùng"):
+        bp.copy_app()
+    assert (out / "app" / "main.py").read_text(encoding="utf-8") == "old"  # không mất gì
+
+
+def test_copy_app_replaces_cleanly(tmp_path, monkeypatch):
+    bp = _build_module()
+    out = tmp_path / "UdemyTranscript"
+    (out / "app").mkdir(parents=True)
+    (out / "app" / "stale.py").write_text("x", encoding="utf-8")
+    monkeypatch.setattr(bp, "OUT", out)
+    bp.copy_app()
+    names = {p.name for p in (out / "app").iterdir()}
+    assert "stale.py" not in names and set(bp.APP_FILES) <= names and "static" in names
+    assert not (out / "app.old").exists()

@@ -8,6 +8,7 @@ Dán URL 1 khoá Udemy đã mua → tải transcript (tiếng Anh + tiếng Vi�
 - **Lõi**: `udemy.py` — client API Udemy (`curl_cffi`, giả TLS fingerprint Chrome để qua Cloudflare), parse VTT → SRT/text, gom curriculum thành chương/bài, `download_course()` điều phối.
 - **CLI**: `cli.py` — cùng lõi, không cần web UI.
 - **Trang đọc HTML**: `render.py` — dựng `index.html`/`overview.html`/`transcript.<lang>.html` từ dữ liệu đã có trên đĩa (không gọi Udemy). `markdown-it-py` chỉ dùng cho `OVERVIEW.md`.
+- **Đa ngôn ngữ giao diện EN/VI** (xem mục riêng bên dưới): `i18n.py` (server) + bảng `STR` trong `static/index.html` (web UI) + `MESSAGES` trong `launcher.py` (portable).
 - **Frontend**: `static/index.html` — HTML/CSS/JS thuần, bake vào image (sửa xong phải rebuild, hoặc `docker cp` như story-writer).
 - **Triển khai**: service `udemy-transcript` trong `docker-compose.yml` gốc, `restart: unless-stopped`, bind **`127.0.0.1:8096`** (không mở ra LAN vì app giữ token đăng nhập Udemy). Card trong `docs/dashboard.html`.
 
@@ -118,7 +119,8 @@ data/
 ZIP chứa Python embeddable, double-click `.vbs`, không cần cài gì.
 
 ```bash
-python windows-portable/build_portable.py v1.0 [--clean]   # chạy trên Windows → dist/UdemyTranscript-v1.0-portable.zip (~16 MB)
+python windows-portable/build_portable.py v1.1 [--clean]   # chạy trên Windows → dist/UdemyTranscript-v1.1-portable.zip (~16 MB)
+# Dựng gói trong windows-portable/build/UdemyTranscript (dist/ chỉ chứa zip). Muốn chạy thử: giải nén zip ra chỗ khác.
 ```
 
 - **Build bằng Python, không PowerShell** (PowerShell.exe crash khi gọi từ Git Bash trên máy này). Phải chạy **trên Windows**: deps cài bằng `pip install --target runtime/Lib/site-packages --platform win_amd64 --python-version 312 --only-binary=:all:`, mà pip đánh giá environment marker theo máy đang chạy (vd `click` cần `colorama` khi win32). Bỏ extras (`uvicorn[standard]` → `uvicorn`). Runtime + deps được cache (hash requirements); `--clean` để làm lại từ đầu.
@@ -131,7 +133,20 @@ python windows-portable/build_portable.py v1.0 [--clean]   # chạy trên Window
 - **Chưa có auto-update**: nâng cấp = giải nén bản mới + copy `data\` cũ sang (README_USER ghi rõ).
 - **Đã smoke-test thật trên Windows (2026-10-13)**: giải nén zip → `runtime\pythonw.exe launcher.py` → app-info/Host/header guard đúng, lần chạy thứ 2 chỉ mở browser, tải trọn khoá Business (58+58 transcript, 34 file, 4 trang HTML), shutdown thoát hẳn process. Chưa thử double-click `.vbs` (cùng lệnh, nhưng mở browser/dialog thật) và chưa thử trên máy khác không có Python.
 
+## Đa ngôn ngữ giao diện (EN/VI)
+
+- **Ngôn ngữ GIAO DIỆN ≠ ngôn ngữ PHỤ ĐỀ.** Giao diện: `en`/`vi` (`i18n.LANGS`). Phụ đề: `langs` của job (`en`, `vi`, `ja`...). Hàm `t(key, ui_lang=None, **kw)` — tham số tên `ui_lang` **cố ý**: nhiều message có placeholder `{lang}` = mã phụ đề; bản đầu đặt tên tham số là `lang` → `t("log_captions", lang="en")` nuốt mất placeholder → KeyError giữa job (có test hồi quy).
+- **Chọn ngôn ngữ**: `data/settings.json` (`ui_lang`, ghi bởi `POST /api/settings` khi bấm EN|VI) → env `APP_LANG` → `en`. Lần đầu mở web (`saved=false`), UI đoán theo `navigator.language` rồi lưu. Launcher portable đọc settings.json, chưa có thì theo ngôn ngữ giao diện Windows (`GetUserDefaultUILanguage`, primary 0x2A = vi) và đặt `APP_LANG` cho server.
+- **Đổi ngôn ngữ** → `main.rerender_courses()`: dựng lại `OVERVIEW.md` (từ `overview.json`) + toàn bộ HTML của mọi khoá, không gọi Udemy. `CONTENTS.md`, `resources/INDEX.md`, `transcript.<lang>.md` (heading "(No section)") đổi ở lần bấm Cập nhật kế tiếp. Log job đã có giữ nguyên ngôn ngữ lúc ghi.
+- **Tên ngôn ngữ phụ đề**: trong câu chữ dùng `render.lang_label()` (dịch theo giao diện: "Transcript Vietnamese" / "Transcript Tiếng Anh"); nút chuyển ngôn ngữ trên trang transcript dùng `lang_name()` = tên gốc ("Tiếng Việt", "English") như checkbox trên web UI.
+- **Không dịch**: dữ liệu Udemy trả về. Vài field (`content_info` "Tổng số 5 giờ", `instructional_level_simple`) Udemy đã tự dịch theo ngôn ngữ **tài khoản Udemy** → vẫn hiện tiếng Việt trong giao diện EN — đúng (dữ liệu gốc), không phải chữ của app.
+- **Test**: conftest chạy mọi test ở `APP_LANG=vi` + settings.json riêng mỗi test (không đọc nhầm `data/settings.json` thật do bản Docker mount cùng thư mục ghi ra) → assertion tiếng Việt cũ giữ nguyên. `test_i18n.py`: mọi key có cả en/vi + cùng placeholder + bản en không còn dấu tiếng Việt; mọi key `data-i18n*`/`T("...")` trong `static/index.html` đều có trong cả 2 bảng; nội dung sinh ra bằng tiếng Anh end-to-end; `APP_FILES` của build_portable khớp đúng mọi `*.py` ở gốc repo.
+- **Fake trong test phải dùng `t()`** như code thật (vd `ResClient` trong test_resources) — không viết cứng câu tiếng Việt, nếu không test tiếng Anh sẽ thấy chữ Việt lọt vào.
+- Thêm module `.py` mới ở gốc → phải thêm vào `APP_FILES` của `build_portable.py` (test chặn). `i18n.py` từng suýt bị quên → bản portable sẽ crash lúc khởi động.
+
 ## Fix history
+
+- **2026-10-13 — Build portable xoá mất code của bản portable đang chạy**: gói từng được dựng ngay trong `dist/UdemyTranscript`; user double-click `.vbs` ở đó để thử → launcher giữ cwd ở `app/` → lần build sau `shutil.rmtree(app/)` xoá hết file bên trong rồi mới lỗi `WinError 32` ở chính thư mục → bản đang chạy mất giao diện (500; `data/` không ảnh hưởng). Khôi phục bằng cách copy lại `app/` từ zip v1.0 (không cần tắt app). Sửa: (1) dựng gói ở `windows-portable/build/` (gitignored), `dist/` chỉ chứa zip; (2) `find_running_build()` hỏi `/api/app-info` cổng 8097–8106, có bản chạy từ thư mục build → dừng trước khi đụng gì; (3) `copy_app` **đổi tên** `app/` → `app.old` trước rồi mới xoá — thư mục bị khoá thì rename thất bại ngay, chưa file nào mất.
 
 - **2026-10-13 — Udemy Business (`<công-ty>.udemy.com`) lỗi "HTTP 500 subscribed-courses"**: `subscribed-courses?search=<slug>` trả 500 trên Business (không search thì 200), mà `resolve_course` chỉ bỏ qua 403/404 nên job chết. Sửa: thêm bước gọi thẳng `courses/<slug>/` lên đầu, bỏ `search` khỏi subscribed-courses, mọi lỗi trừ 401 đều chuyển sang nguồn kế tiếp. Trang khoá Business cũng không có `data-clp-course-id`.
 

@@ -3,6 +3,7 @@ data/
 
 # Bản build Windows portable (~60 MB) và cache Python embeddable
 windows-portable/dist/
+windows-portable/build/
 windows-portable/.cache/
 
 # Python

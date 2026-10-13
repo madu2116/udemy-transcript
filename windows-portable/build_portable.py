@@ -1,5 +1,8 @@
 """Build bản Windows portable của udemy-transcript → dist/UdemyTranscript-<version>-portable.zip
 
+(Dựng gói trong windows-portable/build/UdemyTranscript — muốn chạy thử thì giải nén zip ra chỗ khác,
+đừng chạy thẳng trong build/: app đang chạy sẽ khoá thư mục, lần build sau sẽ dừng lại báo lỗi.)
+
     python windows-portable/build_portable.py [version] [--clean]
 
 Viết bằng Python thay vì PowerShell (PowerShell.exe crash khi gọi từ Git Bash trên máy build). Chạy trên Windows: pip đánh giá environment marker theo máy đang chạy (vd click
@@ -32,13 +35,17 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 TEMPLATES = HERE / "templates"
 CACHE = HERE / ".cache"
-DIST = HERE / "dist"
-OUT = DIST / APP
+DIST = HERE / "dist"  # chỉ chứa file zip
+# Thư mục dựng gói — tách khỏi dist/ để chạy thử app (vd double-click .vbs) không khoá thư mục mà
+# lần build sau cần xoá. Đã xảy ra thật: app chạy từ dist/UdemyTranscript giữ cwd ở app/, build
+# xoá hết file trong app/ rồi mới lỗi WinError 32 → app đang chạy mất giao diện.
+OUT = HERE / "build" / APP
+PORTABLE_PORTS = range(8097, 8107)  # khớp PORT_RANGE của launcher.py
 RUNTIME = OUT / "runtime"
 SITE = RUNTIME / "Lib" / "site-packages"
-APP_FILES = ["main.py", "udemy.py", "render.py", "config.py", "cli.py"]
+APP_FILES = ["main.py", "udemy.py", "render.py", "config.py", "cli.py", "i18n.py"]
 APP_DIRS = ["static"]
-LAUNCHER_FILES = ["launcher.py", "UdemyTranscript.vbs", "start.bat", "README_USER.txt"]
+LAUNCHER_FILES = ["launcher.py", "UdemyTranscript.vbs", "start.bat", "README_USER.txt", "README_USER.vi.txt"]
 CRLF_SUFFIXES = {".bat", ".vbs", ".txt"}
 # Không bao giờ đóng gói: dữ liệu người dùng (token!), log, cache bytecode, file tải dở
 EXCLUDE_TOP = {"data", "app.log"}
@@ -108,11 +115,41 @@ def install_deps(clean: bool):
     stamp.write_text(digest)
 
 
+def _app_info(port: int):
+    try:
+        import json
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/app-info", timeout=1) as resp:
+            return json.loads(resp.read())
+    except Exception:
+        return None
+
+
+def find_running_build(out: Path = None, fetch=_app_info) -> int | None:
+    """Port của bản portable đang chạy TỪ thư mục dựng gói (data_dir nằm trong `out`), nếu có."""
+    root = str((out or OUT).resolve()).lower()
+    for port in PORTABLE_PORTS:
+        info = fetch(port)
+        data_dir = str((info or {}).get("data_dir") or "").lower() if isinstance(info, dict) else ""
+        if info and info.get("app") == "udemy-transcript" and data_dir.startswith(root):
+            return port
+    return None
+
+
 def copy_app():
     step("3/6 Code ứng dụng → app/")
     app_dir = OUT / "app"
     if app_dir.exists():
-        shutil.rmtree(app_dir)
+        # Đổi tên TRƯỚC khi xoá: thư mục đang bị khoá (cwd của app đang chạy) thì rename thất bại
+        # ngay, chưa file nào bị xoá — rmtree trực tiếp thì xoá hết file rồi mới lỗi ở thư mục.
+        old = app_dir.with_name("app.old")
+        if old.exists():
+            shutil.rmtree(old)
+        try:
+            app_dir.rename(old)
+        except OSError as e:
+            raise SystemExit(f"Không thay được {app_dir} (đang bị dùng?): {e}\n"
+                             "Tắt bản portable đang chạy từ thư mục build rồi build lại.")
+        shutil.rmtree(old)
     app_dir.mkdir()
     for f in APP_FILES:
         shutil.copy2(ROOT / f, app_dir / f)
@@ -187,6 +224,10 @@ def main(argv: list[str]):
     version = args[0] if args else "v1.0"
     if os.name != "nt":
         print("⚠ Nên build trên Windows — environment marker của dependency sẽ đánh giá theo máy hiện tại.")
+    running = find_running_build()
+    if running:
+        raise SystemExit(f"Bản portable trong {OUT} đang chạy (port {running}) — bấm \"Tắt ứng dụng\" "
+                         "trên web rồi build lại. Chưa thay đổi gì.")
     OUT.mkdir(parents=True, exist_ok=True)
     build_runtime(clean)
     install_deps(clean)

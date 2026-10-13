@@ -61,6 +61,7 @@ def test_anchor_and_helpers():
     assert render.anchor("01.02") == "l-01-02"
     assert render.fmt_duration(125) == "2:05" and render.fmt_duration(None) == "0:00"
     assert render.lang_name("vi") == "Tiếng Việt" and render.lang_name("xx") == "XX"
+    assert render.lang_label("en") == "Tiếng Anh" and render.lang_label("xx") == "XX"  # giao diện vi (conftest)
     assert render.chapter_heading({"index": 0, "title": ""}) == "Mở đầu"
 
 
@@ -111,7 +112,7 @@ def test_index_page():
     for fact in ("👤 Jane", "⏱ 4.5 total hours", "📶 All Levels", "🗓 Cập nhật 2024-01-02", "2 chương · 2 bài video · 2 file đính kèm"):
         assert fact in doc
     assert '<a class="btn" href="overview.html">' in doc
-    assert '<a class="btn primary" href="transcript.en.html">Transcript English</a>' in doc
+    assert '<a class="btn primary" href="transcript.en.html">Transcript Tiếng Anh</a>' in doc
     assert '<a class="btn" href="transcript.vi.html">Transcript Tiếng Việt (dịch máy)</a>' in doc
     assert '<a class="chip" title="phụ đề gốc" href="transcript.en.html#l-01-01">EN</a>' in doc
     assert '<a class="chip auto" title="phụ đề dịch máy" href="transcript.vi.html#l-01-01">VI</a>' in doc

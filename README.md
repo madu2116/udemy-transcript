@@ -1,33 +1,36 @@
 # Udemy Transcript
 
-Tải về máy **transcript**, **tổng quan khoá** và **file đính kèm** (pdf, docx…) của các khoá Udemy bạn đã mua, rồi đọc ngay trên trình duyệt — có mục lục, đổi qua lại tiếng Anh ⇄ tiếng Việt mà vẫn giữ đúng bài đang đọc.
+**English** · [Tiếng Việt](README.vi.md)
 
-Dán link khoá → bấm **Tải** → bấm **📖 Đọc trên trình duyệt**. Vậy thôi.
+Download the **transcripts**, **course overview** and **attached files** (pdf, docx…) of the Udemy courses you own, then read them right in your browser — with a table of contents and an English ⇄ Vietnamese switch that keeps you on the lecture you were reading.
 
-> ⚠️ Chỉ dùng cho khoá học **bạn đã sở hữu**, cho mục đích học tập cá nhân. Nội dung khoá học thuộc bản quyền của giảng viên/Udemy — đừng chia sẻ lại các file đã tải. Tự chịu trách nhiệm tuân thủ [Điều khoản sử dụng của Udemy](https://www.udemy.com/terms/) (và quy định của công ty nếu dùng Udemy Business).
+Paste a course link → click **Download** → click **📖 Read in browser**. That's it.
+
+> ⚠️ For courses **you own**, for personal study only. Course content is copyrighted by its instructors/Udemy — don't share the downloaded files. You are responsible for following [Udemy's Terms of Use](https://www.udemy.com/terms/) (and your company's rules if you use Udemy Business).
 >
-> Dự án độc lập, **không liên kết, không được Udemy tài trợ hay xác nhận**. "Udemy" là thương hiệu của Udemy, Inc. App không tải video và không vượt qua DRM — chỉ lấy phụ đề và file đính kèm mà tài khoản của bạn vốn đã xem/tải được.
+> Independent project, **not affiliated with, sponsored or endorsed by Udemy**. "Udemy" is a trademark of Udemy, Inc. The app does not download videos and does not bypass DRM — it only fetches captions and attached files your account can already view/download.
 
-## Tính năng
+## Features
 
-- **Transcript từng bài** dạng `.txt` và `.srt` (có mốc thời gian), cộng **1 file gộp cả khoá** cho mỗi ngôn ngữ — tiện đưa cho ChatGPT/Claude tóm tắt hay hỏi đáp.
-- **Chọn ngôn ngữ** (mặc định tiếng Anh + tiếng Việt). Ưu tiên phụ đề gốc do giảng viên upload; bản dịch máy của Udemy được đánh dấu rõ.
-- **File đính kèm** của mọi bài, kể cả bài đọc (Article), xếp theo chương.
-- **Tổng quan khoá**: giới thiệu, "Bạn sẽ học được gì", yêu cầu, đối tượng, giảng viên, đánh giá…
-- **Trang đọc HTML**: trang chủ khoá (mục lục + link tới từng bài và file đính kèm), trang tổng quan, trang transcript có mục lục bám theo vị trí đang đọc. Link tương đối nên mở thẳng từ ổ đĩa hay file zip cũng được.
-- **Chạy lại không tải trùng**: bài/file đã có được bỏ qua, chỉ tải phần mới.
-- Hỗ trợ **Udemy Business** (tài khoản công ty, `<tên-công-ty>.udemy.com`).
-- Nhanh: tải thẳng file phụ đề qua API — một khoá ~60 bài mất vài giây, không cần mở trình duyệt tự động.
+- **Per-lecture transcripts** as `.txt` and `.srt` (with timestamps), plus **one combined file for the whole course** per language — handy for asking ChatGPT/Claude to summarise or quiz you.
+- **Pick caption languages** (English + Vietnamese by default). Instructor-uploaded captions are preferred; Udemy's machine translations are clearly flagged.
+- **Attached files** from every lecture, including articles, organised by section.
+- **Course overview**: description, "What you'll learn", requirements, target audience, instructors, rating…
+- **HTML reading pages**: course home (contents + links to every lecture and attachment), overview page, and transcript pages with a contents sidebar that follows your reading position. Links are relative, so they also work opened straight from disk or from the zip.
+- **Re-runs skip what you have**: existing lectures/files are left alone, only new content is fetched.
+- **English / Vietnamese interface** — switch with the **EN | VI** buttons; logs, error messages and the course reading pages follow.
+- Works with **Udemy Business** (company accounts, `<company>.udemy.com`).
+- Fast: captions are fetched straight from the API — a ~60-lecture course takes seconds, no browser automation.
 
-## Cài đặt & chạy
+## Install & run
 
-Chọn 1 trong 3 cách.
+Pick one of three ways.
 
-### 1. Windows — bản portable (không cần cài gì)
+### 1. Windows — portable build (nothing to install)
 
-Tải file `UdemyTranscript-<phiên bản>-portable.zip`, giải nén vào thư mục **có đường dẫn ngắn** (vd `D:\UdemyTranscript`), double-click **`UdemyTranscript.vbs`** → trình duyệt tự mở `http://localhost:8097`. Tắt bằng nút **⏻ Tắt ứng dụng** trên trang. Hướng dẫn chi tiết nằm trong `README_USER.txt` của gói.
+Download `UdemyTranscript-<version>-portable.zip`, extract it into a folder with a **short path** (e.g. `D:\UdemyTranscript`), double-click **`UdemyTranscript.vbs`** → your browser opens `http://localhost:8097`. Quit with the **⏻ Quit app** button on the page. Full instructions are in the bundle's `README_USER.txt`.
 
-Tự build gói (trên Windows, cần Python 3.12 và internet):
+Build the bundle yourself (on Windows, needs Python 3.12 and internet):
 
 ```bash
 python windows-portable/build_portable.py v1.0
@@ -42,7 +45,7 @@ docker run -d --name udemy-transcript --restart unless-stopped \
   -p 127.0.0.1:8096:8096 -v "$(pwd)/data:/app/data" udemy-transcript
 ```
 
-Mở http://localhost:8096. Dữ liệu nằm trong `./data` trên máy.
+Open http://localhost:8096. Your data lives in `./data` on the host.
 
 ### 3. Python
 
@@ -51,81 +54,83 @@ pip install -r requirements.txt
 uvicorn main:app --host 127.0.0.1 --port 8096
 ```
 
-## Đăng nhập Udemy
+## Logging in to Udemy
 
-App dùng cookie `access_token` của chính trình duyệt bạn (không cần mật khẩu):
+The app uses the `access_token` cookie from your own browser (no password needed):
 
-1. Đăng nhập udemy.com như bình thường.
-2. F12 → tab **Application** (Chrome/Edge) hoặc **Storage** (Firefox) → **Cookies** → `https://www.udemy.com` (tài khoản công ty: `https://<tên-công-ty>.udemy.com`).
-3. Copy giá trị dòng `access_token`, dán vào ô **Đăng nhập Udemy** trên app → **Lưu**.
+1. Log in to udemy.com as usual.
+2. F12 → **Application** tab (Chrome/Edge) or **Storage** (Firefox) → **Cookies** → `https://www.udemy.com` (company accounts: `https://<company>.udemy.com`).
+3. Copy the value of the `access_token` row, paste it into the **Udemy login** box in the app → **Save**.
 
-Token hết hạn thì làm lại. Nếu bị Cloudflare chặn, dán nguyên chuỗi header `Cookie` (tab Network) thay vì chỉ `access_token`. Có thể đặt sẵn qua biến môi trường `UDEMY_ACCESS_TOKEN` thay vì dán trên web.
+Repeat when the token expires. If Cloudflare blocks you, paste the whole `Cookie` request header (Network tab) instead of just `access_token`. You can also preset it with the `UDEMY_ACCESS_TOKEN` environment variable instead of pasting it in the web UI.
 
-## Dữ liệu tải về
+## Downloaded data
 
 ```
 data/
-  token.txt                         ← token đăng nhập — đừng chia sẻ
-  courses/<tên-khoá>/
-    index.html                      ← mở file này để đọc
+  token.txt                         ← your login token — never share it
+  settings.json                     interface language
+  courses/<course-name>/
+    index.html                      ← open this to read
     overview.html, transcript.en.html, transcript.vi.html
-    OVERVIEW.md                     tổng quan khoá
-    transcript.en.md, transcript.vi.md   transcript gộp cả khoá
-    CONTENTS.md                     mục lục, bài nào có phụ đề ngôn ngữ nào
-    en/01.01 <tên bài>.txt | .srt
+    OVERVIEW.md                     course overview
+    transcript.en.md, transcript.vi.md   combined transcripts
+    CONTENTS.md                     contents, which lectures have which caption languages
+    en/01.01 <lecture title>.txt | .srt
     vi/...
-    resources/<chương>/<file đính kèm>
+    resources/<section>/<attached file>
     resources/INDEX.md
 ```
 
-## Dòng lệnh
+## Command line
 
 ```bash
-python cli.py "https://www.udemy.com/course/<tên-khoá>/" [--langs en,vi] [--force] [--no-resources]
-python render.py --all        # dựng lại các trang HTML từ dữ liệu đã tải, không gọi Udemy
+python cli.py "https://www.udemy.com/course/<course-name>/" [--langs en,vi] [--force] [--no-resources]
+python render.py --all        # rebuild the HTML pages from downloaded data, without calling Udemy
 ```
 
-`--force` tải lại cả những bài đã có; `--no-resources` bỏ qua file đính kèm.
+`--force` re-downloads lectures you already have; `--no-resources` skips attached files.
 
-## Cấu hình
+## Configuration
 
-| Biến môi trường | Mặc định | |
+| Environment variable | Default | |
 |---|---|---|
-| `UDEMY_ACCESS_TOKEN` | — | Token đăng nhập (token dán trên web được ưu tiên hơn) |
-| `TRANSCRIPT_LANGS` | `en,vi` | Ngôn ngữ mặc định khi tải |
-| `TRANSCRIPT_WORKERS` | `4` | Số file tải song song |
-| `DATA_DIR` | `./data` | Thư mục lưu dữ liệu |
-| `ALLOWED_HOSTS` | `localhost,127.0.0.1` | Host được phép truy cập web UI |
+| `UDEMY_ACCESS_TOKEN` | — | Login token (a token pasted in the web UI takes precedence) |
+| `APP_LANG` | `en` | Interface language until one is picked in the web UI (`en` / `vi`) |
+| `TRANSCRIPT_LANGS` | `en,vi` | Default **caption** languages to download |
+| `TRANSCRIPT_WORKERS` | `4` | Parallel downloads |
+| `DATA_DIR` | `./data` | Where data is stored |
+| `ALLOWED_HOSTS` | `localhost,127.0.0.1` | Host names allowed to reach the web UI |
 
-## Bảo mật
+## Security
 
-App được thiết kế để chạy **trên chính máy của bạn**:
+The app is meant to run **on your own computer**:
 
-- Bản Docker chỉ lắng nghe `127.0.0.1`; app từ chối request có Host lạ (chống DNS rebinding), và các lệnh không có body (tắt app, mở thư mục) đòi header riêng nên trang web khác không gửi hộ được.
-- Token không bao giờ được trả ra qua API; chỉ được gửi tới `udemy.com` / `*.udemy.com`.
-- Nội dung lấy từ Udemy được escape khi dựng HTML; các trang đọc chặn mọi kết nối mạng từ script (CSP `connect-src 'none'`).
+- The Docker setup listens on `127.0.0.1` only; requests with an unknown Host header are rejected (DNS-rebinding protection), and body-less commands (quit, open folder) require a custom header so other websites can't trigger them.
+- The token is never returned by the API and is only ever sent to `udemy.com` / `*.udemy.com`.
+- Content from Udemy is escaped when building HTML; the reading pages block all network requests from scripts (CSP `connect-src 'none'`).
 
-**Đừng** mở app ra mạng ngoài (vd đổi `-p 0.0.0.0:...`) — app không có đăng nhập riêng, ai vào được trang là dùng được token của bạn.
+**Do not** expose the app to the network (e.g. `-p 0.0.0.0:...`) — it has no login of its own, so anyone who reaches the page can use your token.
 
-## Phát triển
+## Development
 
 ```bash
 pip install -r requirements-dev.txt
 python -m pytest tests -q
 ```
 
-Chi tiết kiến trúc, các endpoint Udemy đã kiểm chứng và lịch sử sửa lỗi nằm trong [`CLAUDE.md`](CLAUDE.md).
+Architecture notes, verified Udemy endpoints and the fix history are in [`CLAUDE.md`](CLAUDE.md) (Vietnamese). Interface strings live in `i18n.py` (server side) and in the `STR` table of `static/index.html` (web UI); both are checked by tests for missing keys and mismatched placeholders.
 
-## Hạn chế
+## Limitations
 
-- Chỉ lấy transcript của bài **video**; nội dung chữ của bài đọc, quiz, bài tập code chưa được lưu (file đính kèm của chúng thì có).
-- Phụ đề tiếng Việt trên Udemy phần lớn là **dịch máy** — chất lượng tham khảo.
-- Bản portable chưa có tự động cập nhật: giải nén bản mới rồi copy thư mục `data\` cũ sang.
+- Only **video** lectures get transcripts; the text of articles, quizzes and coding exercises isn't saved yet (their attached files are).
+- Most Vietnamese captions on Udemy are **machine-translated** — treat them as a reference.
+- The portable build has no auto-update yet: extract the new version and copy your old `data\` folder into it.
 
 ## License
 
-[MIT](LICENSE) © 2026 madu — áp dụng cho **mã nguồn** của repo này, không áp dụng cho nội dung khoá học tải về bằng app.
+[MIT](LICENSE) © 2026 madu — applies to this repository's **source code**, not to course content downloaded with the app.
 
-## Ghi nhận
+## Credits
 
-Ý tưởng ban đầu từ [TOA-Anakin/udemy-transcript-downloader](https://github.com/TOA-Anakin/udemy-transcript-downloader) (Node.js + Puppeteer). Bản này viết lại từ đầu bằng Python: tải phụ đề trực tiếp qua API thay vì điều khiển trình duyệt, và bổ sung file đính kèm, tổng quan khoá, trang đọc HTML, bản Windows portable.
+The original idea comes from [TOA-Anakin/udemy-transcript-downloader](https://github.com/TOA-Anakin/udemy-transcript-downloader) (Node.js + Puppeteer). This is a from-scratch Python rewrite: captions are fetched straight from the API instead of driving a browser, plus attached files, course overview, HTML reading pages and a Windows portable build.

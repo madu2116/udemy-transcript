@@ -20,20 +20,44 @@ from pathlib import Path
 
 from markdown_it import MarkdownIt
 
+from i18n import get_lang, t
+
 _md = MarkdownIt("commonmark", {"html": False})
 
 LANG_NAMES = {"en": "English", "vi": "Tiếng Việt", "ja": "日本語", "ko": "한국어", "zh": "中文",
               "fr": "Français", "de": "Deutsch", "es": "Español", "pt": "Português", "it": "Italiano"}
-KIND_LABELS = {"article": "Bài đọc", "e-book": "E-book", "file": "Tài liệu", "presentation": "Slide",
-               "audio": "Audio", "externallink": "Link"}
+KIND_LABELS = {"e-book": "E-book", "presentation": "Slide", "audio": "Audio", "externallink": "Link"}
+KIND_KEYS = {"article": "kind_article", "file": "kind_file"}  # nhãn cần dịch
+
+
+def kind_label(kind: str | None) -> str:
+    if kind in KIND_KEYS:
+        return t(KIND_KEYS[kind])
+    return KIND_LABELS.get(kind, kind or "")
 
 
 def esc(value) -> str:
     return html.escape(str(value if value is not None else ""), quote=True)
 
 
+# Tên ngôn ngữ phụ đề theo ngôn ngữ GIAO DIỆN — dùng trong câu chữ ("Transcript Vietnamese").
+# LANG_NAMES (tên gốc: "Tiếng Việt", "日本語") chỉ dùng cho nút chuyển ngôn ngữ, như checkbox trên web UI.
+LANG_LABELS = {
+    "en": {"en": "English", "vi": "Vietnamese", "ja": "Japanese", "ko": "Korean", "zh": "Chinese",
+           "fr": "French", "de": "German", "es": "Spanish", "pt": "Portuguese", "it": "Italian"},
+    "vi": {"en": "Tiếng Anh", "vi": "Tiếng Việt", "ja": "Tiếng Nhật", "ko": "Tiếng Hàn", "zh": "Tiếng Trung",
+           "fr": "Tiếng Pháp", "de": "Tiếng Đức", "es": "Tiếng Tây Ban Nha", "pt": "Tiếng Bồ Đào Nha", "it": "Tiếng Ý"},
+}
+
+
 def lang_name(lang: str) -> str:
+    """Tên gốc của ngôn ngữ (cho nút chuyển ngôn ngữ)."""
     return LANG_NAMES.get(lang, lang.upper())
+
+
+def lang_label(lang: str) -> str:
+    """Tên ngôn ngữ dịch theo giao diện (cho câu chữ, tiêu đề)."""
+    return LANG_LABELS.get(get_lang(), LANG_LABELS["en"]).get(lang, lang.upper())
 
 
 def anchor(number: str) -> str:
@@ -46,7 +70,7 @@ def fmt_duration(sec) -> str:
 
 
 def chapter_heading(ch: dict) -> str:
-    return f"{ch['index']}. {ch['title']}" if ch["index"] else "Mở đầu"
+    return f"{ch['index']}. {ch['title']}" if ch["index"] else t("html_intro_section")
 
 
 CSS = """
@@ -142,14 +166,14 @@ TRANSCRIPT_JS = """
 
 def page(title: str, body: str, script: str = "") -> str:
     return (
-        '<!doctype html>\n<html lang="vi">\n<head>\n<meta charset="utf-8">\n'
+        f'<!doctype html>\n<html lang="{get_lang()}">\n<head>\n<meta charset="utf-8">\n'
         '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
         f"<title>{esc(title)}</title>\n<style>{CSS}</style>\n</head>\n<body>\n{body}\n{script}</body>\n</html>\n"
     )
 
 
 def topbar(course_title: str, back: bool = True, extra: str = "") -> str:
-    back_link = '<a href="index.html">← Trang khoá</a>' if back else ""
+    back_link = f'<a href="index.html">{esc(t("html_back"))}</a>' if back else ""
     return f'<header class="topbar">{back_link}<span class="course">{esc(course_title)}</span>{extra}</header>'
 
 
@@ -161,7 +185,7 @@ def resource_links(resources: list) -> str:
         elif r.get("ok"):
             out.append(f'<a class="res" href="{esc(r["path"])}">📎 {esc(r["name"])}</a>')
         else:
-            out.append(f'<span class="res missing">📎 {esc(r["name"])} — chưa tải được</span>')
+            out.append(f'<span class="res missing">📎 {esc(r["name"])} — {esc(t("html_not_downloaded"))}</span>')
     return "".join(out)
 
 
@@ -192,18 +216,18 @@ def render_index(meta: dict, details: dict | None, has_overview: bool) -> str:
         if details.get("instructional_level_simple"):
             facts.append("📶 " + details["instructional_level_simple"])
         if details.get("last_update_date"):
-            facts.append("🗓 Cập nhật " + details["last_update_date"])
-    facts.append(f"{meta.get('chapter_count', len(outline))} chương · {meta.get('lecture_count', 0)} bài video"
-                 + (f" · {n_files} file đính kèm" if n_files else ""))
+            facts.append("🗓 " + t("html_updated", date=details["last_update_date"]))
+    facts.append(t("html_counts", chapters=meta.get("chapter_count", len(outline)), lectures=meta.get("lecture_count", 0))
+                 + (" · " + t("html_files", n=n_files) if n_files else ""))
 
     actions = []
     if has_overview:
-        actions.append('<a class="btn" href="overview.html">Tổng quan khoá</a>')
+        actions.append(f'<a class="btn" href="overview.html">{esc(t("html_overview_btn"))}</a>')
     for i, lang in enumerate(langs):
-        label = f"Transcript {lang_name(lang)}" + (" (dịch máy)" if _all_auto(meta, lang) else "")
+        label = f"Transcript {lang_label(lang)}" + (t("html_machine_suffix") if _all_auto(meta, lang) else "")
         actions.append(f'<a class="btn{" primary" if i == 0 else ""}" href="transcript.{esc(lang)}.html">{esc(label)}</a>')
     if meta.get("url"):
-        actions.append(f'<a class="btn" href="{esc(meta["url"])}" target="_blank" rel="noopener noreferrer">Mở trên Udemy ↗</a>')
+        actions.append(f'<a class="btn" href="{esc(meta["url"])}" target="_blank" rel="noopener noreferrer">{esc(t("html_open_udemy"))}</a>')
 
     sections = []
     for ch in outline:
@@ -217,14 +241,14 @@ def render_index(meta: dict, details: dict | None, has_overview: bool) -> str:
                     cap = (lec.get("captions") or {}).get(lang)
                     if (lec.get("transcripts") or {}).get(lang):
                         cls = "chip auto" if cap == "auto" else "chip"
-                        title = "phụ đề dịch máy" if cap == "auto" else "phụ đề gốc"
+                        title = esc(t("html_chip_auto") if cap == "auto" else t("html_chip_manual"))
                         chips.append(f'<a class="{cls}" title="{title}" href="transcript.{esc(lang)}.html#{anchor(lec["number"])}">{esc(lang.upper())}</a>')
                     else:
-                        chips.append(f'<span class="chip off" title="không có phụ đề">{esc(lang.upper())}</span>')
+                        chips.append(f'<span class="chip off" title="{esc(t("html_chip_none"))}">{esc(lang.upper())}</span>')
                 links = "".join(chips) + resource_links(lec.get("resources", []))
             else:
                 num = '<span class="num">·</span>'
-                side = KIND_LABELS.get(lec.get("kind"), lec.get("kind") or "")
+                side = kind_label(lec.get("kind"))
                 links = resource_links(lec.get("resources", []))
             rows.append(
                 f'<li>{num}<span class="t">{esc(lec["title"])}</span><span class="side">{esc(side)}</span>'
@@ -250,7 +274,7 @@ def render_overview(meta: dict, overview_md: str) -> str:
         topbar(meta["title"])
         + f'<div class="wrap narrow"><div class="content prose">{_md.render(overview_md)}</div></div>'
     )
-    return page(f"Tổng quan — {meta['title']}", body)
+    return page(t("html_overview_title", title=meta["title"]), body)
 
 
 # ── Transcript ──────────────────────────────────────────────
@@ -274,7 +298,8 @@ def render_transcript(meta: dict, course_dir: Path, lang: str) -> str | None:
             count += 1
             aid = anchor(lec["number"])
             toc_items.append(f'<li><a href="#{aid}"><span class="num">{esc(lec["number"])}</span>{esc(lec["title"])}</a></li>')
-            badge = '<span class="badge auto">dịch máy</span>' if (lec.get("captions") or {}).get(lang) == "auto" else ""
+            badge = (f'<span class="badge auto">{esc(t("html_badge_auto"))}</span>'
+                     if (lec.get("captions") or {}).get(lang) == "auto" else "")
             res = resource_links(lec.get("resources", []))
             arts.append(
                 f'<article id="{aid}"><h3><span class="num">{esc(lec["number"])}</span>{esc(lec["title"])}{badge}</h3>'
@@ -294,16 +319,16 @@ def render_transcript(meta: dict, course_dir: Path, lang: str) -> str | None:
             f'<span class="on">{esc(lang_name(x))}</span>' if x == lang
             else f'<a href="transcript.{esc(x)}.html" data-keep-hash>{esc(lang_name(x))}</a>'
             for x in langs) + "</span>"
-    note = ('<div class="note">Toàn bộ phụ đề ngôn ngữ này là bản <b>dịch máy</b> của Udemy — có thể sai thuật ngữ, '
-            'đối chiếu bản gốc khi cần.</div>') if _all_auto(meta, lang) else ""
+    # html_all_auto_note là chuỗi tin cậy của app (có <b>), không phải dữ liệu Udemy → không escape
+    note = f'<div class="note">{t("html_all_auto_note")}</div>' if _all_auto(meta, lang) else ""
     body = (
         topbar(meta["title"], extra=switch)
         + '<div class="wrap"><div class="layout">'
-        + f'<aside class="toc"><details open><summary>Mục lục · {count} bài</summary><ol>{"".join(toc)}</ol></details></aside>'
-        + f'<main class="content"><h1>Transcript · {esc(lang_name(lang))}</h1>{note}{"".join(sections)}'
-        + '<p><a class="top" href="#">↑ Lên đầu trang</a></p></main></div></div>'
+        + f'<aside class="toc"><details open><summary>{esc(t("html_toc", n=count))}</summary><ol>{"".join(toc)}</ol></details></aside>'
+        + f'<main class="content"><h1>Transcript · {esc(lang_label(lang))}</h1>{note}{"".join(sections)}'
+        + f'<p><a class="top" href="#">{esc(t("html_back_to_top"))}</a></p></main></div></div>'
     )
-    return page(f"Transcript {lang_name(lang)} — {meta['title']}", body, TRANSCRIPT_JS)
+    return page(f"Transcript {lang_label(lang)} — {meta['title']}", body, TRANSCRIPT_JS)
 
 
 # ── Điều phối ───────────────────────────────────────────────
@@ -314,7 +339,7 @@ def render_course(course_dir: Path, meta: dict | None = None) -> list[str]:
     if meta is None:
         meta = json.loads((course_dir / "course.json").read_text(encoding="utf-8"))
     if not meta.get("outline"):
-        raise ValueError("course.json chưa có outline (khoá tải bằng bản cũ) — bấm Cập nhật để tải lại")
+        raise ValueError(t("html_no_outline"))
 
     written = []
     overview_md = course_dir / "OVERVIEW.md"
@@ -357,7 +382,7 @@ def main(argv: list[str]) -> int:
             print(f"{d.name}: {', '.join(render_course(d))}")
         except (OSError, ValueError) as e:
             failed += 1
-            print(f"{d.name}: LỖI {e}", file=sys.stderr)
+            print(t("render_error", name=d.name, err=e), file=sys.stderr)
     return 1 if failed else 0
 
 

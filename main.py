@@ -16,6 +16,8 @@ from pydantic import BaseModel
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 import config
+import i18n
+from i18n import t
 from udemy import UdemyClient, UdemyError, download_course, parse_course_url
 
 app = FastAPI(title="Udemy Transcript")
@@ -65,7 +67,7 @@ def _worker():
             )
             _update(job_id, status="done", slug=meta["slug"], stats=meta["stats"])
         except Exception as e:
-            _log(job_id, f"THẤT BẠI: {e}")
+            _log(job_id, t("log_job_failed", err=e))
             _update(job_id, status="error", error=str(e))
         finally:
             _update(job_id, finished_at=time.time())
@@ -92,7 +94,7 @@ def require_app_header(x_requested_with: str | None = Header(default=None)):
     Bắt header riêng → trình duyệt buộc preflight CORS, mà app không bật CORS → bị chặn.
     (POST có body JSON đã an toàn sẵn: FastAPI chỉ parse body khi Content-Type là application/json.)"""
     if x_requested_with != APP_HEADER:
-        raise HTTPException(403, "Thiếu header X-Requested-With")
+        raise HTTPException(403, t("api_missing_header"))
 
 
 @app.get("/api/app-info")
@@ -105,7 +107,7 @@ def app_info():
 @app.post("/api/shutdown", dependencies=[Depends(require_app_header)])
 def shutdown():
     if not config.PORTABLE:
-        raise HTTPException(403, "Chỉ tắt được bản portable — bản Docker dùng docker compose stop")
+        raise HTTPException(403, t("api_shutdown_docker"))
     threading.Timer(0.5, lambda: os._exit(0)).start()  # trả response trước rồi mới tắt
     return {"ok": True}
 
@@ -114,7 +116,7 @@ def shutdown():
 def open_folder(slug: str | None = None):
     """Mở thư mục khoá (hoặc thư mục dữ liệu) bằng Explorer — chỉ bản portable trên Windows."""
     if not config.PORTABLE or not hasattr(os, "startfile"):
-        raise HTTPException(403, "Chỉ có ở bản Windows portable")
+        raise HTTPException(403, t("api_portable_only"))
     if slug:
         path = _course_dir(slug)
     else:
@@ -122,6 +124,50 @@ def open_folder(slug: str | None = None):
         path.mkdir(parents=True, exist_ok=True)
     os.startfile(config.display_path(path))  # Explorer không hiểu tiền tố \\?\
     return {"ok": True, "path": config.display_path(path)}
+
+
+class SettingsIn(BaseModel):
+    ui_lang: str
+
+
+def rerender_courses() -> int:
+    """Đổi ngôn ngữ giao diện → dựng lại OVERVIEW.md (từ overview.json) + trang HTML của mọi khoá
+    đã tải, để trang đọc không lẫn 2 thứ tiếng. Không gọi Udemy. Các .md khác (CONTENTS, INDEX,
+    transcript gộp) đổi theo ở lần bấm Cập nhật kế tiếp."""
+    from render import render_course
+    from udemy import write_overview
+
+    done = 0
+    for meta_file in config.COURSES_DIR.glob("*/course.json") if config.COURSES_DIR.exists() else []:
+        course_dir = meta_file.parent
+        try:
+            meta = json.loads(meta_file.read_text(encoding="utf-8"))
+            details_file = course_dir / "overview.json"
+            if details_file.exists() and meta.get("host"):
+                write_overview(course_dir, meta["host"], json.loads(details_file.read_text(encoding="utf-8")))
+            if meta.get("outline"):
+                render_course(course_dir, meta)
+                done += 1
+        except (OSError, ValueError) as e:
+            print(f"[settings] rerender {course_dir.name}: {e}", flush=True)
+    return done
+
+
+@app.get("/api/settings")
+def get_settings():
+    """`saved=false` → người dùng chưa chọn lần nào, web UI tự đoán theo ngôn ngữ trình duyệt rồi lưu."""
+    return {"ui_lang": i18n.get_lang(), "saved": i18n.saved_lang() is not None, "langs": list(i18n.LANGS)}
+
+
+@app.post("/api/settings")
+def update_settings(body: SettingsIn):
+    lang = body.ui_lang.strip().lower()
+    if lang not in i18n.LANGS:
+        raise HTTPException(400, t("api_bad_ui_lang"))
+    changed = lang != i18n.get_lang() or i18n.saved_lang() is None
+    i18n.set_lang(lang)
+    rerendered = rerender_courses() if changed else 0
+    return {**get_settings(), "rerendered": rerendered}
 
 
 class TokenIn(BaseModel):
@@ -145,7 +191,7 @@ def token_status(check: bool = False):
 @app.post("/api/token")
 def set_token(body: TokenIn):
     if not body.token.strip():
-        raise HTTPException(400, "Token trống")
+        raise HTTPException(400, t("api_token_empty"))
     config.save_token(body.token)
     return token_status(check=True)
 
@@ -171,7 +217,7 @@ def create_job(body: JobIn):
         raise HTTPException(400, str(e))
     langs = [x.strip().lower() for x in (body.langs or config.DEFAULT_LANGS) if x.strip()]
     if not langs or not all(LANG_RE.match(x) for x in langs):
-        raise HTTPException(400, "Mã ngôn ngữ không hợp lệ (vd: en, vi)")
+        raise HTTPException(400, t("api_bad_langs"))
     job_id = uuid.uuid4().hex[:10]
     with jobs_lock:
         jobs[job_id] = {
@@ -195,7 +241,7 @@ def list_jobs():
 def get_job(job_id: str):
     with jobs_lock:
         if job_id not in jobs:
-            raise HTTPException(404, "Không có job này")
+            raise HTTPException(404, t("api_no_job"))
         return dict(jobs[job_id], logs=list(jobs[job_id]["logs"]))
 
 
@@ -203,7 +249,7 @@ def _course_dir(slug: str) -> Path:
     root = config.COURSES_DIR.resolve()
     path = (root / slug).resolve()
     if path.parent != root or not (path / "course.json").exists():
-        raise HTTPException(404, "Không có khoá này")
+        raise HTTPException(404, t("api_no_course"))
     return path
 
 
@@ -222,10 +268,10 @@ def list_courses():
 @app.get("/api/courses/{slug}/transcript/{lang}")
 def course_transcript(slug: str, lang: str, download: bool = False):
     if not LANG_RE.match(lang):
-        raise HTTPException(400, "Mã ngôn ngữ không hợp lệ")
+        raise HTTPException(400, t("api_bad_lang"))
     path = _course_dir(slug) / f"transcript.{lang}.md"
     if not path.exists():
-        raise HTTPException(404, "Khoá này không có transcript ngôn ngữ này")
+        raise HTTPException(404, t("api_no_transcript"))
     if download:
         return FileResponse(path, media_type="text/markdown; charset=utf-8", filename=f"{slug}.{lang}.md")
     return PlainTextResponse(path.read_text(encoding="utf-8"))
@@ -235,7 +281,7 @@ def course_transcript(slug: str, lang: str, download: bool = False):
 def course_overview(slug: str, download: bool = False):
     path = _course_dir(slug) / "OVERVIEW.md"
     if not path.exists():
-        raise HTTPException(404, "Khoá này chưa có tổng quan — bấm Cập nhật để tải lại")
+        raise HTTPException(404, t("api_no_overview"))
     if download:
         return FileResponse(path, media_type="text/markdown; charset=utf-8", filename=f"{slug}.overview.md")
     return PlainTextResponse(path.read_text(encoding="utf-8"))
@@ -252,7 +298,7 @@ def view_file(slug: str, path: str = ""):
     root = _course_dir(slug)
     target = (root / (path or "index.html")).resolve()
     if not target.is_relative_to(root) or not target.is_file():
-        raise HTTPException(404, "Không có file này" if path else "Khoá này chưa có trang HTML — bấm Cập nhật")
+        raise HTTPException(404, t("api_no_file") if path else t("api_no_html"))
     resp = FileResponse(target)
     if target.suffix.lower() in (".html", ".htm"):
         resp.headers["Content-Security-Policy"] = VIEW_CSP

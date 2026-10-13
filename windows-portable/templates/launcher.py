@@ -48,6 +48,69 @@ else:
         pass
 
 
+# Launcher chạy TRƯỚC khi nạp app → bảng dịch riêng (app dùng i18n.py). Ngôn ngữ: lựa chọn đã lưu
+# trong data/settings.json (nút EN|VI trên web) → ngôn ngữ giao diện Windows → tiếng Anh.
+MESSAGES = {
+    "starting": {"en": "[Launcher] Starting {title} (portable) — {root}",
+                 "vi": "[Launcher] Khởi động {title} (portable) — {root}"},
+    "running": {"en": "[Launcher] Already running on port {port} — just opening the browser.",
+                "vi": "[Launcher] Đang chạy sẵn trên port {port} — chỉ mở trình duyệt."},
+    "ports_busy": {"en": "All ports from {first} to {last} are busy.\n\nClose some applications and try again.",
+                   "vi": "Tất cả cổng từ {first} đến {last} đều đang bận.\n\nHãy đóng bớt ứng dụng rồi chạy lại."},
+    "port_fallback": {"en": "[Launcher] Port {preferred} busy — using port {port}.",
+                      "vi": "[Launcher] Port {preferred} bận — dùng port {port}."},
+    "server": {"en": "[Launcher] Server: http://localhost:{port}  |  data: {data}",
+               "vi": "[Launcher] Server: http://localhost:{port}  |  dữ liệu: {data}"},
+    "no_browser": {"en": "[Launcher] NO_BROWSER — not opening the browser (http://localhost:{port})",
+                   "vi": "[Launcher] NO_BROWSER — không mở trình duyệt (http://localhost:{port})"},
+    "not_ready_log": {"en": "[Launcher] ⚠ Server not ready after {s}s — could not open the browser.",
+                      "vi": "[Launcher] ⚠ Server không sẵn sàng sau {s}s — không tự mở được trình duyệt."},
+    "not_ready_box": {"en": "The app did not start within {s} seconds.\n\nSee app.log in the application folder.",
+                      "vi": "Ứng dụng không khởi động được sau {s} giây.\n\nXem file app.log trong thư mục ứng dụng."},
+    "long_log": {"en": "[Launcher] ⚠ Application folder path is {n} characters long — may exceed Windows' 260-character limit",
+                 "vi": "[Launcher] ⚠ Thư mục ứng dụng dài {n} ký tự — có thể vượt giới hạn 260 ký tự của Windows"},
+    "long_box": {
+        "en": "The application folder is in a long path ({n} characters):\n{root}\n\n"
+              "Windows limits paths to 260 characters — some attached files may not open in Word/Excel.\n\n"
+              "Quit the app and move the whole folder to a short path such as D:\\UdemyTranscript "
+              "(downloaded data moves with it). This message is shown only once.",
+        "vi": "Thư mục ứng dụng đang nằm ở đường dẫn dài ({n} ký tự):\n{root}\n\n"
+              "Windows giới hạn đường dẫn 260 ký tự — một số file đính kèm có thể không mở được bằng "
+              "Word/Excel.\n\nNên tắt app, chuyển cả thư mục sang đường dẫn ngắn như D:\\UdemyTranscript "
+              "(dữ liệu đã tải đi theo thư mục). Thông báo này chỉ hiện 1 lần."},
+    "crash_box": {"en": "The app hit an error while starting.\n\nSee app.log for details "
+                        "(or run start.bat to see the log live).",
+                  "vi": "Ứng dụng gặp lỗi khi khởi động.\n\nXem chi tiết trong file app.log "
+                        "(hoặc chạy start.bat để thấy log trực tiếp)."},
+}
+LANG_VI_PRIMARY = 0x2A  # PRIMARYLANGID của tiếng Việt (LANGID 0x042A)
+
+
+def detect_lang() -> str:
+    try:
+        import json
+        lang = json.loads((DATA_DIR / "settings.json").read_text(encoding="utf-8")).get("ui_lang")
+        if lang in ("en", "vi"):
+            return lang
+    except (OSError, ValueError, AttributeError):
+        pass
+    try:
+        import ctypes
+        if ctypes.windll.kernel32.GetUserDefaultUILanguage() & 0x3FF == LANG_VI_PRIMARY:
+            return "vi"
+    except Exception:  # không phải Windows
+        pass
+    return "en"
+
+
+LANG = "en"
+
+
+def msg(key: str, **kw) -> str:
+    entry = MESSAGES[key]
+    return (entry.get(LANG) or entry["en"]).format(**kw)
+
+
 def message_box(text: str, icon: int = 0x30):
     """Hộp thoại Windows — cách duy nhất báo lỗi cho user khi chạy pythonw (không console)."""
     try:
@@ -72,13 +135,9 @@ def warn_long_root():
     marker = DATA_DIR / ".long-path-warned"
     if len(str(ROOT)) <= LONG_ROOT_WARN or marker.exists():
         return
-    print(f"[Launcher] ⚠ Thư mục ứng dụng dài {len(str(ROOT))} ký tự — có thể vượt giới hạn 260 ký tự của Windows")
+    print(msg("long_log", n=len(str(ROOT))))
     if not os.environ.get("NO_BROWSER"):  # chế độ test tự động: không hiện dialog chặn luồng
-        message_box(
-            f"Thư mục ứng dụng đang nằm ở đường dẫn dài ({len(str(ROOT))} ký tự):\n{ROOT}\n\n"
-            "Windows giới hạn đường dẫn 260 ký tự — một số file đính kèm có thể không mở được bằng "
-            "Word/Excel.\n\nNên tắt app, chuyển cả thư mục sang đường dẫn ngắn như D:\\UdemyTranscript "
-            "(dữ liệu đã tải đi theo thư mục). Thông báo này chỉ hiện 1 lần.", 0x40)
+        message_box(msg("long_box", n=len(str(ROOT)), root=ROOT), 0x40)
     try:
         marker.write_text("1", encoding="utf-8")
     except OSError:
@@ -117,7 +176,7 @@ def find_free_port() -> int | None:
 
 def open_browser(port: int):
     if os.environ.get("NO_BROWSER"):  # test tự động: không mở browser, không hiện dialog
-        print(f"[Launcher] NO_BROWSER — không mở trình duyệt (http://localhost:{port})")
+        print(msg("no_browser", port=port))
         return
     webbrowser.open(f"http://localhost:{port}")
 
@@ -128,27 +187,30 @@ def _open_browser_when_ready(port: int, timeout_s: int = 30):
             open_browser(port)
             return
         time.sleep(0.5)
-    print(f"[Launcher] ⚠ Server không sẵn sàng sau {timeout_s}s — không tự mở được trình duyệt.")
-    message_box(f"Ứng dụng không khởi động được sau {timeout_s} giây.\n\nXem file app.log trong thư mục ứng dụng.")
+    print(msg("not_ready_log", s=timeout_s))
+    message_box(msg("not_ready_box", s=timeout_s))
 
 
 def main():
-    print(f"[Launcher] Khởi động {TITLE} (portable) — {ROOT}")
+    global LANG
+    LANG = detect_lang()
+    # App chưa có settings.json (lần đầu) → mặc định theo ngôn ngữ Windows; web UI vẫn đổi được
+    os.environ.setdefault("APP_LANG", LANG)
+    print(msg("starting", title=TITLE, root=ROOT))
     running = find_running_instance()
     if running:
-        print(f"[Launcher] Đang chạy sẵn trên port {running} — chỉ mở trình duyệt.")
+        print(msg("running", port=running))
         open_browser(running)
         return
 
     port = find_free_port()
     if port is None:
-        msg = (f"Tất cả cổng từ {PORT_RANGE.start} đến {PORT_RANGE.stop - 1} đều đang bận.\n\n"
-               "Hãy đóng bớt ứng dụng rồi chạy lại.")
-        print(f"[Launcher] ⚠ {msg}")
-        message_box(msg)
+        text = msg("ports_busy", first=PORT_RANGE.start, last=PORT_RANGE.stop - 1)
+        print(f"[Launcher] ⚠ {text}")
+        message_box(text)
         return
     if port != PORT_PREFERRED:
-        print(f"[Launcher] Port {PORT_PREFERRED} bận — dùng port {port}.")
+        print(msg("port_fallback", preferred=PORT_PREFERRED, port=port))
 
     DATA_DIR.mkdir(exist_ok=True)
     warn_long_root()
@@ -161,7 +223,7 @@ def main():
 
     import uvicorn
     from main import app
-    print(f"[Launcher] Server: http://localhost:{port}  |  dữ liệu: {os.environ['DATA_DIR']}")
+    print(msg("server", port=port, data=os.environ["DATA_DIR"]))
     uvicorn.run(app, host="127.0.0.1", port=port, log_level="info")
 
 
@@ -170,6 +232,5 @@ if __name__ == "__main__":
         main()
     except Exception:
         traceback.print_exc()
-        message_box("Ứng dụng gặp lỗi khi khởi động.\n\nXem chi tiết trong file app.log "
-                    "(hoặc chạy start.bat để thấy log trực tiếp).", 0x10)
+        message_box(msg("crash_box"), 0x10)
         raise

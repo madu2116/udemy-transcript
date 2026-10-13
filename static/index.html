@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="vi">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -44,52 +44,61 @@
   .course .links { margin-top: 6px; display: flex; gap: 12px; flex-wrap: wrap; }
   a { color: var(--accent); }
   .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 10px; background: var(--code); margin-right: 6px; }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; padding: 6px 10px; font-size: 12px; font-weight: 600; }
+  .seg button.on { background: var(--accent); color: var(--accent-ink); }
 </style>
 </head>
 <body>
 <main>
   <div class="row" style="justify-content:space-between">
     <h1>Udemy Transcript</h1>
-    <div class="row" id="portableBar" hidden>
-      <button id="openData" title="Mở thư mục chứa các khoá đã tải">📂 Thư mục dữ liệu</button>
-      <button id="shutdownBtn" title="Tắt hẳn ứng dụng (bản portable)">⏻ Tắt ứng dụng</button>
+    <div class="row">
+      <span class="row" id="portableBar" hidden>
+        <button id="openData" data-i18n="open_data" data-i18n-title="open_data_title"></button>
+        <button id="shutdownBtn" data-i18n="shutdown" data-i18n-title="shutdown_title"></button>
+      </span>
+      <span class="seg" id="langSwitch" role="group" aria-label="Language">
+        <button type="button" data-ui-lang="en">EN</button>
+        <button type="button" data-ui-lang="vi">VI</button>
+      </span>
     </div>
   </div>
-  <p class="sub">Dán URL khoá Udemy đã mua → tải tổng quan khoá, transcript (.txt + .srt), 1 file gộp toàn khoá cho từng ngôn ngữ, và file đính kèm của bài.</p>
+  <p class="sub" data-i18n="subtitle"></p>
 
   <section class="panel">
-    <h2>Đăng nhập Udemy</h2>
-    <div id="tokenStatus" class="muted">Đang kiểm tra...</div>
+    <h2 data-i18n="login_h"></h2>
+    <div id="tokenStatus" class="muted" data-i18n="checking"></div>
     <div class="row" style="margin-top:10px">
-      <input type="password" id="tokenInput" placeholder="Dán cookie access_token (hoặc nguyên chuỗi Cookie header)" autocomplete="off">
-      <button id="saveToken">Lưu</button>
-      <button id="checkToken">Kiểm tra</button>
-      <button id="clearToken" title="Xoá token đã lưu qua web, quay về dùng .env">Xoá</button>
+      <input type="password" id="tokenInput" data-i18n-ph="token_ph" autocomplete="off">
+      <button id="saveToken" data-i18n="save"></button>
+      <button id="checkToken" data-i18n="check"></button>
+      <button id="clearToken" data-i18n="clear" data-i18n-title="clear_title"></button>
     </div>
     <details>
-      <summary>Lấy access_token thế nào?</summary>
+      <summary data-i18n="howto"></summary>
       <ol>
-        <li>Mở <code>udemy.com</code> trên trình duyệt, đăng nhập.</li>
-        <li>Bấm F12 → tab <b>Application</b> (Chrome/Edge) hoặc <b>Storage</b> (Firefox) → Cookies → <code>https://www.udemy.com</code>.</li>
-        <li>Tìm dòng <code>access_token</code>, copy cột <b>Value</b> và dán vào ô trên.</li>
-        <li>Nếu bị báo Cloudflare chặn: tab <b>Network</b> → bấm 1 request tới udemy.com → copy nguyên giá trị header <code>Cookie</code> và dán vào.</li>
+        <li data-i18n-html="howto_1"></li>
+        <li data-i18n-html="howto_2"></li>
+        <li data-i18n-html="howto_3"></li>
+        <li data-i18n-html="howto_4"></li>
       </ol>
     </details>
   </section>
 
   <section class="panel">
-    <h2>Tải transcript</h2>
+    <h2 data-i18n="download_h"></h2>
     <form id="jobForm" class="row">
-      <input type="text" id="urlInput" placeholder="https://www.udemy.com/course/ten-khoa-hoc/" required>
-      <button type="submit" class="primary" id="startBtn">Tải</button>
+      <input type="text" id="urlInput" data-i18n-ph="url_ph" required>
+      <button type="submit" class="primary" id="startBtn" data-i18n="start"></button>
     </form>
     <div class="row" style="margin-top:10px">
-      <span class="muted">Ngôn ngữ:</span>
+      <span class="muted" data-i18n="caption_langs"></span>
       <label class="chk"><input type="checkbox" name="lang" value="en" checked> English</label>
       <label class="chk"><input type="checkbox" name="lang" value="vi" checked> Tiếng Việt</label>
-      <input type="text" id="extraLangs" placeholder="khác, vd: ja,ko" style="flex:0 1 140px">
-      <label class="chk"><input type="checkbox" id="resources" checked> Tải tài nguyên đính kèm (pdf, docx...)</label>
-      <label class="chk"><input type="checkbox" id="force"> Tải lại bài đã có</label>
+      <input type="text" id="extraLangs" data-i18n-ph="extra_ph" style="flex:0 1 140px">
+      <label class="chk"><input type="checkbox" id="resources" checked> <span data-i18n="resources_label"></span></label>
+      <label class="chk"><input type="checkbox" id="force"> <span data-i18n="force_label"></span></label>
     </div>
     <div id="jobBox" hidden style="margin-top:14px">
       <div id="jobHead"></div>
@@ -99,14 +108,100 @@
   </section>
 
   <section class="panel">
-    <h2>Khoá đã tải</h2>
-    <div id="courses" class="muted">Chưa có khoá nào.</div>
+    <h2 data-i18n="courses_h"></h2>
+    <div id="courses" class="muted" data-i18n="no_courses"></div>
   </section>
 </main>
 
 <script>
+// Bảng dịch giao diện. Chữ do server sinh ra (log job, lỗi API, trang đọc khoá) dịch ở i18n.py —
+// đổi ngôn ngữ ở đây sẽ POST /api/settings để server đổi theo.
+// *_html: chuỗi tin cậy của app (có thẻ <b>/<code>) → gán innerHTML; còn lại gán textContent.
+const STR = {
+  en: {
+    locale: "en-US",
+    subtitle: "Paste the URL of a Udemy course you own → download its overview, transcripts (.txt + .srt), one combined file per language, and the lectures' attached files.",
+    open_data: "📂 Data folder", open_data_title: "Open the folder that holds downloaded courses",
+    shutdown: "⏻ Quit app", shutdown_title: "Shut the app down completely (portable build)",
+    login_h: "Udemy login", checking: "Checking...",
+    token_ph: "Paste the access_token cookie (or the full Cookie header)",
+    save: "Save", check: "Check", clear: "Clear", clear_title: "Delete the token saved via the web UI and fall back to .env",
+    howto: "How do I get the access_token?",
+    howto_1: "Open <code>udemy.com</code> in your browser and log in.",
+    howto_2: "Press F12 → <b>Application</b> tab (Chrome/Edge) or <b>Storage</b> (Firefox) → Cookies → <code>https://www.udemy.com</code> (company accounts: <code>https://&lt;company&gt;.udemy.com</code>).",
+    howto_3: "Find the <code>access_token</code> row, copy its <b>Value</b> and paste it above.",
+    howto_4: "If you get a Cloudflare block: <b>Network</b> tab → click any request to udemy.com → copy the full <code>Cookie</code> request header and paste that instead.",
+    download_h: "Download transcripts",
+    url_ph: "https://www.udemy.com/course/course-name/", start: "Download",
+    caption_langs: "Caption languages:", extra_ph: "others, e.g. ja,ko",
+    resources_label: "Download attached files (pdf, docx...)", force_label: "Re-download existing lectures",
+    courses_h: "Downloaded courses", no_courses: "No courses yet.",
+    src_web: "saved via web", src_env: "from .env",
+    no_token_html: '<span class="warn">No token yet.</span> Paste the <code>access_token</code> cookie below.',
+    logged_in: "✓ Logged in: {user}", has_token: "Token saved ({src}) — click Check to verify.",
+    pick_lang: "Pick at least one caption language",
+    job_queued: "Queued...", job_running: "Downloading...", job_done: "Done", job_error: "Error",
+    job_files: " — {done}/{total} files",
+    errors: "{n} failed", read: "📖 Read in browser", overview: "Overview",
+    view_lang: "View {lang}", download_md: "Download {lang}.md",
+    course_meta: "{chapters} sections · {lectures} video lectures · updated {when}",
+    zip: "Download zip (transcripts + files)", open_folder: "📂 Open folder", update: "Update",
+    confirm_busy: "A course is still downloading — quitting now stops it midway (running it again later resumes the missing parts). Quit anyway?",
+    confirm_quit: "Quit the app?",
+    quit_title: "Udemy Transcript has been shut down",
+    quit_body_html: "You can close this tab. To start it again, double-click <b>UdemyTranscript.vbs</b>.",
+  },
+  vi: {
+    locale: "vi-VN",
+    subtitle: "Dán URL khoá Udemy đã mua → tải tổng quan khoá, transcript (.txt + .srt), 1 file gộp toàn khoá cho từng ngôn ngữ, và file đính kèm của bài.",
+    open_data: "📂 Thư mục dữ liệu", open_data_title: "Mở thư mục chứa các khoá đã tải",
+    shutdown: "⏻ Tắt ứng dụng", shutdown_title: "Tắt hẳn ứng dụng (bản portable)",
+    login_h: "Đăng nhập Udemy", checking: "Đang kiểm tra...",
+    token_ph: "Dán cookie access_token (hoặc nguyên chuỗi Cookie header)",
+    save: "Lưu", check: "Kiểm tra", clear: "Xoá", clear_title: "Xoá token đã lưu qua web, quay về dùng .env",
+    howto: "Lấy access_token thế nào?",
+    howto_1: "Mở <code>udemy.com</code> trên trình duyệt, đăng nhập.",
+    howto_2: "Bấm F12 → tab <b>Application</b> (Chrome/Edge) hoặc <b>Storage</b> (Firefox) → Cookies → <code>https://www.udemy.com</code> (tài khoản công ty: <code>https://&lt;tên-công-ty&gt;.udemy.com</code>).",
+    howto_3: "Tìm dòng <code>access_token</code>, copy cột <b>Value</b> và dán vào ô trên.",
+    howto_4: "Nếu bị báo Cloudflare chặn: tab <b>Network</b> → bấm 1 request tới udemy.com → copy nguyên giá trị header <code>Cookie</code> và dán vào.",
+    download_h: "Tải transcript",
+    url_ph: "https://www.udemy.com/course/ten-khoa-hoc/", start: "Tải",
+    caption_langs: "Ngôn ngữ phụ đề:", extra_ph: "khác, vd: ja,ko",
+    resources_label: "Tải tài nguyên đính kèm (pdf, docx...)", force_label: "Tải lại bài đã có",
+    courses_h: "Khoá đã tải", no_courses: "Chưa có khoá nào.",
+    src_web: "lưu qua web", src_env: "từ .env",
+    no_token_html: '<span class="warn">Chưa có token.</span> Dán cookie <code>access_token</code> bên dưới.',
+    logged_in: "✓ Đã đăng nhập: {user}", has_token: "Đã có token ({src}) — bấm Kiểm tra để xác nhận.",
+    pick_lang: "Chọn ít nhất 1 ngôn ngữ",
+    job_queued: "Đang chờ...", job_running: "Đang tải...", job_done: "Xong", job_error: "Lỗi",
+    job_files: " — {done}/{total} file",
+    errors: "{n} lỗi", read: "📖 Đọc trên trình duyệt", overview: "Tổng quan",
+    view_lang: "Xem {lang}", download_md: "Tải {lang}.md",
+    course_meta: "{chapters} chương · {lectures} bài video · cập nhật {when}",
+    zip: "Tải zip (transcript + tài nguyên)", open_folder: "📂 Mở thư mục", update: "Cập nhật",
+    confirm_busy: "Đang có khoá đang tải — tắt bây giờ sẽ dừng giữa chừng (lần sau chạy lại sẽ tải tiếp phần còn thiếu). Vẫn tắt?",
+    confirm_quit: "Tắt ứng dụng?",
+    quit_title: "Đã tắt Udemy Transcript",
+    quit_body_html: "Có thể đóng tab này. Muốn mở lại: double-click <b>UdemyTranscript.vbs</b>.",
+  },
+};
+
+let UI = "en";
+const T = (key, vars = {}) => (STR[UI][key] ?? STR.en[key] ?? key).replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? "");
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+function applyStatic() {
+  document.documentElement.lang = UI;
+  for (const el of document.querySelectorAll("[data-i18n]")) el.textContent = T(el.dataset.i18n);
+  for (const el of document.querySelectorAll("[data-i18n-html]")) el.innerHTML = T(el.dataset.i18nHtml);
+  for (const el of document.querySelectorAll("[data-i18n-ph]")) el.placeholder = T(el.dataset.i18nPh);
+  for (const el of document.querySelectorAll("[data-i18n-title]")) el.title = T(el.dataset.i18nTitle);
+  for (const b of document.querySelectorAll("[data-ui-lang]")) {
+    b.classList.toggle("on", b.dataset.uiLang === UI);
+    b.setAttribute("aria-pressed", String(b.dataset.uiLang === UI));
+  }
+}
 
 async function api(path, opts = {}) {
   const res = await fetch(path, { headers: { "Content-Type": "application/json", "X-Requested-With": "udemy-transcript" }, ...opts });
@@ -115,13 +210,39 @@ async function api(path, opts = {}) {
   return data;
 }
 
-function renderToken(t) {
-  const src = { web: "lưu qua web", env: "từ .env", none: "" }[t.source];
+const saveLang = (lang) => api("/api/settings", { method: "POST", body: JSON.stringify({ ui_lang: lang }) });
+
+async function initLang() {
+  const s = await api("/api/settings").catch(() => null);
+  if (s && s.saved) {
+    UI = s.ui_lang;
+  } else {
+    // Lần đầu mở: đoán theo trình duyệt rồi lưu lại để log/trang đọc do server sinh ra cũng theo
+    UI = (navigator.language || "").toLowerCase().startsWith("vi") ? "vi" : "en";
+    saveLang(UI).catch(() => {});
+  }
+  applyStatic();
+}
+
+for (const b of document.querySelectorAll("[data-ui-lang]")) b.onclick = async () => {
+  if (b.dataset.uiLang === UI) return;
+  UI = b.dataset.uiLang;
+  applyStatic();
+  if (lastToken) renderToken(lastToken);
+  if (lastJob) renderJob(lastJob);
+  await saveLang(UI).catch((e) => alertBox(e.message));
+  loadCourses();  // sau khi server dựng lại trang đọc khoá theo ngôn ngữ mới
+};
+
+let lastToken = null;
+function renderToken(tok) {
+  lastToken = tok;
+  const src = { web: T("src_web"), env: T("src_env"), none: "" }[tok.source];
   let html;
-  if (!t.configured) html = `<span class="warn">Chưa có token.</span> Dán cookie <code>access_token</code> bên dưới.`;
-  else if (t.valid === true) html = `<span class="ok">✓ Đã đăng nhập: ${esc(t.user || "OK")}</span> <span class="muted">(${src})</span>`;
-  else if (t.valid === false) html = `<span class="err">✗ ${esc(t.error)}</span> <span class="muted">(${src})</span>`;
-  else html = `Đã có token <span class="muted">(${src})</span> — bấm Kiểm tra để xác nhận.`;
+  if (!tok.configured) html = T("no_token_html");
+  else if (tok.valid === true) html = `<span class="ok">${esc(T("logged_in", { user: tok.user || "OK" }))}</span> <span class="muted">(${esc(src)})</span>`;
+  else if (tok.valid === false) html = `<span class="err">✗ ${esc(tok.error)}</span> <span class="muted">(${esc(src)})</span>`;
+  else html = esc(T("has_token", { src }));
   $("tokenStatus").innerHTML = html;
 }
 
@@ -133,11 +254,11 @@ async function refreshToken(check) {
 $("saveToken").onclick = async () => {
   const token = $("tokenInput").value.trim();
   if (!token) return;
-  $("tokenStatus").textContent = "Đang kiểm tra...";
+  $("tokenStatus").textContent = T("checking");
   try { renderToken(await api("/api/token", { method: "POST", body: JSON.stringify({ token }) })); $("tokenInput").value = ""; }
   catch (e) { $("tokenStatus").innerHTML = `<span class="err">${esc(e.message)}</span>`; }
 };
-$("checkToken").onclick = () => { $("tokenStatus").textContent = "Đang kiểm tra..."; refreshToken(true); };
+$("checkToken").onclick = () => { $("tokenStatus").textContent = T("checking"); refreshToken(true); };
 $("clearToken").onclick = async () => renderToken(await api("/api/token", { method: "DELETE" }));
 
 function selectedLangs() {
@@ -150,7 +271,7 @@ let pollTimer = null;
 $("jobForm").onsubmit = async (ev) => {
   ev.preventDefault();
   const langs = selectedLangs();
-  if (!langs.length) return alertBox("Chọn ít nhất 1 ngôn ngữ");
+  if (!langs.length) return alertBox(T("pick_lang"));
   try {
     const job = await api("/api/jobs", { method: "POST", body: JSON.stringify({ url: $("urlInput").value, langs, force: $("force").checked, resources: $("resources").checked }) });
     watchJob(job.id);
@@ -158,10 +279,26 @@ $("jobForm").onsubmit = async (ev) => {
 };
 
 function alertBox(msg) {
+  lastJob = null;
   $("jobBox").hidden = false;
   $("jobHead").innerHTML = `<span class="err">${esc(msg)}</span>`;
   $("jobBar").style.width = "0";
   $("jobLog").textContent = "";
+}
+
+let lastJob = null;
+function renderJob(job) {
+  lastJob = job;
+  const label = T(`job_${job.status}`);
+  const cls = { done: "ok", error: "err" }[job.status] || "";
+  const count = job.total ? T("job_files", { done: job.done, total: job.total }) : "";
+  $("jobHead").innerHTML = `<b class="${cls}">${esc(label)}</b> <span class="muted">${esc(job.slug)}${esc(count)}</span>`;
+  $("jobBar").style.width = job.status === "done" ? "100%" : (job.total ? `${(100 * job.done / job.total).toFixed(1)}%` : "0");
+  const log = $("jobLog");
+  const atBottom = log.scrollTop + log.clientHeight >= log.scrollHeight - 4;
+  log.textContent = job.logs.join("\n");
+  if (atBottom) log.scrollTop = log.scrollHeight;
+  $("startBtn").disabled = job.status === "queued" || job.status === "running";
 }
 
 function watchJob(id) {
@@ -170,16 +307,7 @@ function watchJob(id) {
   const tick = async () => {
     let job;
     try { job = await api(`/api/jobs/${id}`); } catch { return; }
-    const label = { queued: "Đang chờ...", running: "Đang tải...", done: "Xong", error: "Lỗi" }[job.status];
-    const cls = { done: "ok", error: "err" }[job.status] || "";
-    const count = job.total ? ` — ${job.done}/${job.total} file` : "";
-    $("jobHead").innerHTML = `<b class="${cls}">${label}</b> <span class="muted">${esc(job.slug)}${count}</span>`;
-    $("jobBar").style.width = job.status === "done" ? "100%" : (job.total ? `${(100 * job.done / job.total).toFixed(1)}%` : "0");
-    const log = $("jobLog");
-    const atBottom = log.scrollTop + log.clientHeight >= log.scrollHeight - 4;
-    log.textContent = job.logs.join("\n");
-    if (atBottom) log.scrollTop = log.scrollHeight;
-    $("startBtn").disabled = job.status === "queued" || job.status === "running";
+    renderJob(job);
     if (job.status === "done" || job.status === "error") { clearInterval(pollTimer); loadCourses(); }
   };
   tick();
@@ -188,7 +316,7 @@ function watchJob(id) {
 
 async function loadCourses() {
   const list = await api("/api/courses").catch(() => []);
-  if (!list.length) { $("courses").innerHTML = "Chưa có khoá nào."; return; }
+  if (!list.length) { $("courses").classList.add("muted"); $("courses").textContent = T("no_courses"); return; }
   $("courses").classList.remove("muted");
   $("courses").innerHTML = list.map((c) => {
     const slug = encodeURIComponent(c.slug);
@@ -198,22 +326,22 @@ async function loadCourses() {
     }).join("");
     const r = c.resources;
     const resPill = r && (r.files || r.links)
-      ? `<span class="pill">📎 ${r.downloaded + r.skipped}/${r.files} file${r.links ? ` · ${r.links} link` : ""}${r.failed ? ` · <span class="err">${r.failed} lỗi</span>` : ""}</span>` : "";
+      ? `<span class="pill">📎 ${r.downloaded + r.skipped}/${r.files} file${r.links ? ` · ${r.links} link` : ""}${r.failed ? ` · <span class="err">${esc(T("errors", { n: r.failed }))}</span>` : ""}</span>` : "";
     const view = `/view/${slug}/`;
-    const read = c.html ? `<a href="${view}" target="_blank"><b>📖 Đọc trên trình duyệt</b></a>` : "";
-    const overview = c.html && c.overview ? `<a href="${view}overview.html" target="_blank">Tổng quan</a>` : "";
+    const read = c.html ? `<a href="${view}" target="_blank"><b>${esc(T("read"))}</b></a>` : "";
+    const overview = c.html && c.overview ? `<a href="${view}overview.html" target="_blank">${esc(T("overview"))}</a>` : "";
     const links = read + overview + c.langs.filter((l) => c.combined[l]).map((l) =>
-      (c.html ? `<a href="${view}transcript.${l}.html" target="_blank">Xem ${esc(l)}</a>` : "") +
-      `<a href="/api/courses/${slug}/transcript/${l}?download=1">Tải ${esc(l)}.md</a>`).join("");
-    const when = new Date(c.updated_at * 1000).toLocaleString("vi-VN");
+      (c.html ? `<a href="${view}transcript.${esc(l)}.html" target="_blank">${esc(T("view_lang", { lang: l }))}</a>` : "") +
+      `<a href="/api/courses/${slug}/transcript/${esc(l)}?download=1">${esc(T("download_md", { lang: l }))}</a>`).join("");
+    const when = new Date(c.updated_at * 1000).toLocaleString(T("locale"));
     return `<div class="course">
       <div class="title">${esc(c.title)}</div>
       ${c.headline ? `<div>${esc(c.headline)}</div>` : ""}
-      <div class="muted">${c.chapter_count} chương · ${c.lecture_count} bài video · cập nhật ${when}</div>
+      <div class="muted">${esc(T("course_meta", { chapters: c.chapter_count, lectures: c.lecture_count, when }))}</div>
       <div style="margin-top:6px">${pills}${resPill}</div>
-      <div class="links">${links}<a href="/api/courses/${slug}/zip">Tải zip (transcript + tài nguyên)</a>
-        ${portable ? `<a href="#" data-slug="${esc(c.slug)}" class="open-folder">📂 Mở thư mục</a>` : ""}
-        <a href="#" data-url="${esc(c.url)}" class="reload">Cập nhật</a></div>
+      <div class="links">${links}<a href="/api/courses/${slug}/zip">${esc(T("zip"))}</a>
+        ${portable ? `<a href="#" data-slug="${esc(c.slug)}" class="open-folder">${esc(T("open_folder"))}</a>` : ""}
+        <a href="#" data-url="${esc(c.url)}" class="reload">${esc(T("update"))}</a></div>
     </div>`;
   }).join("");
   for (const a of document.querySelectorAll("a.open-folder")) a.onclick = (ev) => {
@@ -231,12 +359,14 @@ let portable = false;
 $("openData").onclick = () => api("/api/open-folder", { method: "POST" }).catch((e) => alertBox(e.message));
 $("shutdownBtn").onclick = async () => {
   const busy = (await api("/api/jobs").catch(() => [])).some((j) => j.status === "running" || j.status === "queued");
-  if (!confirm(busy ? "Đang có khoá đang tải — tắt bây giờ sẽ dừng giữa chừng (lần sau chạy lại sẽ tải tiếp phần còn thiếu). Vẫn tắt?" : "Tắt ứng dụng?")) return;
+  if (!confirm(busy ? T("confirm_busy") : T("confirm_quit"))) return;
   await api("/api/shutdown", { method: "POST" }).catch(() => {});
-  document.body.innerHTML = '<main><h1>Đã tắt Udemy Transcript</h1><p class="sub">Có thể đóng tab này. Muốn mở lại: double-click <b>UdemyTranscript.vbs</b>.</p></main>';
+  document.body.innerHTML = `<main><h1>${esc(T("quit_title"))}</h1><p class="sub">${T("quit_body_html")}</p></main>`;
 };
 
 (async () => {
+  applyStatic();  // điền chữ ngay (tiếng Anh) để trang không trống trong lúc chờ /api/settings
+  await initLang();
   const info = await api("/api/app-info").catch(() => ({}));
   portable = !!info.portable;
   $("portableBar").hidden = !portable;

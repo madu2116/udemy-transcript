@@ -15,6 +15,8 @@ from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import urlparse
 
+from i18n import t
+
 IMPERSONATE = "chrome"  # curl_cffi giả TLS fingerprint của Chrome để qua Cloudflare
 MAX_CURRICULUM_PAGES = 100
 MAX_COURSE_SCAN_PAGES = 50
@@ -56,10 +58,10 @@ def parse_course_url(url: str) -> tuple[str, str]:
     if host == "udemy.com":
         host = "www.udemy.com"
     if not host.endswith(".udemy.com"):
-        raise ValueError("URL không phải của udemy.com")
+        raise ValueError(t("url_not_udemy"))
     m = _COURSE_PATH_RE.search(parsed.path)
     if not m:
-        raise ValueError("URL không có dạng .../course/<tên-khoá>/")
+        raise ValueError(t("url_no_course"))
     return host, m.group(1)
 
 
@@ -105,7 +107,7 @@ _TAG_RE = re.compile(r"<[^>]*>")
 def _parse_ts(s: str) -> float:
     m = _TS_RE.match(s.strip())
     if not m:
-        raise ValueError(f"timestamp không hợp lệ: {s!r}")
+        raise ValueError(f"invalid timestamp: {s!r}")
     h, mnt, sec, ms = m.groups()
     return int(h or 0) * 3600 + int(mnt) * 60 + int(sec) + int(ms.ljust(3, "0")) / 1000
 
@@ -383,7 +385,7 @@ class UdemyClient:
     def __init__(self, host: str, token_raw: str, timeout: int = 30):
         token, cookies = parse_token(token_raw)
         if not token:
-            raise AuthError("Chưa có access_token — dán cookie access_token ở giao diện web hoặc đặt UDEMY_ACCESS_TOKEN trong .env")
+            raise AuthError(t("no_token"))
         from curl_cffi import requests as cffi_requests
 
         self.host = host
@@ -400,7 +402,7 @@ class UdemyClient:
         if url.startswith("/"):
             url = self.base + url
         elif (urlparse(url).hostname or "").lower() != self.host:
-            raise UdemyError(f"Từ chối gửi token tới host lạ: {url}")
+            raise UdemyError(t("foreign_host", url=url))
         resp = None
         for attempt in range(4):
             resp = self.session.get(url, params=params)
@@ -409,12 +411,12 @@ class UdemyClient:
                 continue
             break
         if resp.status_code == 401:
-            raise AuthError("Token không hợp lệ hoặc đã hết hạn (401) — lấy lại cookie access_token", 401)
+            raise AuthError(t("token_401"), 401)
         if resp.status_code == 403:
             head = resp.text[:3000].lower()
             if "cloudflare" in head or "cf-chl" in head or "just a moment" in head:
-                raise UdemyError("Bị Cloudflare chặn (403) — thử dán nguyên chuỗi Cookie header (có cf_clearance) thay vì chỉ access_token")
-            raise AuthError("Không có quyền truy cập (403) — token sai hoặc tài khoản chưa sở hữu khoá này", 403)
+                raise UdemyError(t("cloudflare_403"))
+            raise AuthError(t("forbidden_403"), 403)
         if resp.status_code == 404:
             raise NotFoundError(f"404: {url}", 404)
         if resp.status_code >= 400:
@@ -426,7 +428,7 @@ class UdemyClient:
         try:
             return resp.json()
         except ValueError:
-            raise UdemyError("Udemy trả về HTML thay vì JSON (có thể bị Cloudflare chặn hoặc chưa đăng nhập)")
+            raise UdemyError(t("not_json"))
 
     def me(self) -> dict:
         return self.get_json("/api-2.0/users/me/")
@@ -477,7 +479,7 @@ class UdemyClient:
             html_text = ""
         m = re.search(r'data-clp-course-id="(\d+)"', html_text)
         if not m:
-            raise NotFoundError(f"Không tìm thấy khoá '{slug}' trong tài khoản này")
+            raise NotFoundError(t("course_not_found", slug=slug))
         course_id = int(m.group(1))
         try:
             title = self.get_json(f"/api-2.0/courses/{course_id}/", {"fields[course]": "title"}).get("title")
@@ -513,7 +515,7 @@ class UdemyClient:
             for entry in entries or []:
                 if entry.get("file"):
                     return entry["file"]
-        raise UdemyError("Udemy không trả link tải cho file này")
+        raise UdemyError(t("no_download_link"))
 
 
 def fetch_vtt(url: str, timeout: int = 30) -> str:
@@ -522,7 +524,7 @@ def fetch_vtt(url: str, timeout: int = 30) -> str:
 
     resp = cffi_requests.get(url, impersonate=IMPERSONATE, timeout=timeout)
     if resp.status_code >= 400:
-        raise UdemyError(f"Tải phụ đề lỗi HTTP {resp.status_code}")
+        raise UdemyError(t("caption_http", status=resp.status_code))
     return resp.content.decode("utf-8-sig", errors="replace")
 
 
@@ -534,7 +536,7 @@ def fetch_file(url: str, dest: Path, timeout: int = 300):
     resp = cffi_requests.get(url, impersonate=IMPERSONATE, timeout=timeout, stream=True)
     try:
         if resp.status_code >= 400:
-            raise UdemyError(f"Tải file lỗi HTTP {resp.status_code}")
+            raise UdemyError(t("file_http", status=resp.status_code))
         with open(part, "wb") as f:
             for chunk in resp.iter_content():
                 f.write(chunk)
@@ -554,7 +556,7 @@ def _fmt_duration(sec: int) -> str:
 def _write_contents(course_dir: Path, course: dict, chapters: list[Chapter], langs: list[str]):
     lines = [f"# {course['title']}", ""]
     for ch in chapters:
-        lines.append(f"## {ch.index}. {ch.title}" if ch.index else "## (Không thuộc chương nào)")
+        lines.append(f"## {ch.index}. {ch.title}" if ch.index else f"## {t('md_no_section')}")
         for lec in ch.lectures:
             tags = []
             for lang in langs:
@@ -576,7 +578,7 @@ def _write_combined(course_dir: Path, course: dict, chapters: list[Chapter], lan
                 section += [f"### {lec.number} {lec.title}", "", txt.read_text(encoding="utf-8").strip(), ""]
                 count += 1
         if section:
-            out += [f"## {ch.index}. {ch.title}" if ch.index else "## (Không thuộc chương nào)", ""] + section
+            out += [f"## {ch.index}. {ch.title}" if ch.index else f"## {t('md_no_section')}", ""] + section
     path = course_dir / f"transcript.{lang}.md"
     if count:
         path.write_text("\n".join(out), encoding="utf-8")
@@ -592,7 +594,9 @@ def _items(value) -> list[str]:
     return [str(x).strip() for x in (value or []) if str(x).strip()]
 
 
-def _write_overview(course_dir: Path, host: str, details: dict):
+def write_overview(course_dir: Path, host: str, details: dict):
+    """OVERVIEW.md (theo ngôn ngữ giao diện hiện tại) + overview.json (raw). Cũng được gọi lại khi
+    đổi ngôn ngữ giao diện — dựng lại từ overview.json, không cần gọi Udemy."""
     d = details
     lines = [f"# {d.get('title') or ''}".rstrip()]
     if d.get("headline"):
@@ -602,57 +606,58 @@ def _write_overview(course_dir: Path, host: str, details: dict):
     instructors = [i.get("display_name") or i.get("title") or "" for i in d.get("visible_instructors") or []]
     jobs = [i.get("job_title") for i in d.get("visible_instructors") or []]
     if any(instructors):
-        facts.append(("Giảng viên", ", ".join(f"{n} ({j})" if j else n for n, j in zip(instructors, jobs) if n)))
+        facts.append((t("ov_instructors"), ", ".join(f"{n} ({j})" if j else n for n, j in zip(instructors, jobs) if n)))
     cats = [c.get("title") for c in (d.get("primary_category"), d.get("primary_subcategory")) if isinstance(c, dict) and c.get("title")]
     if cats:
-        facts.append(("Danh mục", " › ".join(cats)))
+        facts.append((t("ov_category"), " › ".join(cats)))
     if d.get("instructional_level_simple"):
-        facts.append(("Trình độ", d["instructional_level_simple"]))
+        facts.append((t("ov_level"), d["instructional_level_simple"]))
     if isinstance(d.get("locale"), dict) and d["locale"].get("title"):
-        facts.append(("Ngôn ngữ", d["locale"]["title"]))
-    length = " · ".join(x for x in (d.get("content_info"), f"{d['num_lectures']} bài" if d.get("num_lectures") else None) if x)
+        facts.append((t("ov_language"), d["locale"]["title"]))
+    lectures = t("ov_lectures", n=d["num_lectures"]) if d.get("num_lectures") else None
+    length = " · ".join(x for x in (d.get("content_info"), lectures) if x)
     if length:
-        facts.append(("Thời lượng", length))
+        facts.append((t("ov_length"), length))
     if isinstance(d.get("rating"), (int, float)):
         rating = f"{d['rating']:.1f}/5"
         if d.get("num_reviews"):
-            rating += f" ({d['num_reviews']:,} đánh giá)"
+            rating += " (" + t("ov_reviews", n=f"{d['num_reviews']:,}") + ")"
         if d.get("num_subscribers"):
-            rating += f" · {d['num_subscribers']:,} học viên"
-        facts.append(("Đánh giá", rating))
+            rating += " · " + t("ov_students", n=f"{d['num_subscribers']:,}")
+        facts.append((t("ov_rating"), rating))
     if d.get("caption_languages"):
-        facts.append(("Phụ đề", ", ".join(d["caption_languages"])))
+        facts.append((t("ov_captions"), ", ".join(d["caption_languages"])))
     if d.get("last_update_date"):
-        facts.append(("Cập nhật", d["last_update_date"]))
+        facts.append((t("ov_updated"), d["last_update_date"]))
     if d.get("url"):
         url = d["url"] if d["url"].startswith("http") else f"https://{host}{d['url']}"
-        facts.append(("Link", url))
+        facts.append((t("ov_link"), url))
     if facts:
         lines += [""] + [f"- **{k}:** {v}" for k, v in facts]
 
     sections = [
-        ("Bạn sẽ học được gì", _items(d.get("what_you_will_learn_data")) or _items(d.get("objectives"))),
-        ("Yêu cầu", _items(d.get("requirements_data")) or _items(d.get("prerequisites"))),
+        (t("ov_learn"), _items(d.get("what_you_will_learn_data")) or _items(d.get("objectives"))),
+        (t("ov_requirements"), _items(d.get("requirements_data")) or _items(d.get("prerequisites"))),
     ]
     for heading, items in sections:
         if items:
             lines += ["", f"## {heading}", ""] + [f"- {x}" for x in items]
     description = html_to_markdown(d.get("description") or "")
     if description:
-        lines += ["", "## Mô tả", "", description]
+        lines += ["", f"## {t('ov_description')}", "", description]
     audiences = _items(d.get("target_audiences"))
     if audiences:
-        lines += ["", "## Khoá học này dành cho ai", ""] + [f"- {x}" for x in audiences]
+        lines += ["", f"## {t('ov_audience')}", ""] + [f"- {x}" for x in audiences]
 
     (course_dir / "OVERVIEW.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     (course_dir / "overview.json").write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def _write_resource_index(res_dir: Path, course: dict, items: list):
-    lines, last_chapter, last_lecture = [f"# {course['title']} — tài nguyên đính kèm"], None, None
+    lines, last_chapter, last_lecture = [f"# {t('md_resources_title', title=course['title'])}"], None, None
     for res, path in items:
         if res.chapter_index != last_chapter:
-            lines += ["", f"## {res.chapter_index}. {res.chapter_title}" if res.chapter_index else "## (Không thuộc chương nào)", ""]
+            lines += ["", f"## {res.chapter_index}. {res.chapter_title}" if res.chapter_index else f"## {t('md_no_section')}", ""]
             last_chapter, last_lecture = res.chapter_index, None
         if res.lecture_id != last_lecture:
             lines.append(f"- **{res.lecture_title}**")
@@ -662,7 +667,7 @@ def _write_resource_index(res_dir: Path, course: dict, items: list):
             lines.append(f"  - 🔗 [{res.asset.get('title') or url}]({url})")
         else:
             rel = path.relative_to(res_dir).as_posix()
-            lines.append(f"  - [{path.name}](<{rel}>)" + ("" if path.exists() else " — *chưa tải được*"))
+            lines.append(f"  - [{path.name}](<{rel}>)" + ("" if path.exists() else f" — *{t('md_not_downloaded')}*"))
     (res_dir / "INDEX.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -712,15 +717,15 @@ def download_course(url: str, token: str, out_root: Path, langs: list[str], forc
     try:
         client.me()  # Udemy trả 403 (không phải 401) khi token sai — kiểm tra trước cho thông báo rõ ràng
     except AuthError as e:
-        raise AuthError(f"Token không hợp lệ hoặc đã hết hạn — lấy lại cookie access_token ({e})", e.status)
-    log(f"Đang tìm khoá '{slug}' trên {host}...")
+        raise AuthError(t("invalid_token", err=e), e.status)
+    log(t("log_finding", slug=slug, host=host))
     course = client.resolve_course(slug)
-    log(f"Khoá #{course['id']}: {course['title']}")
+    log(t("log_course", id=course["id"], title=course["title"]))
 
     items = client.curriculum(course["id"])
     chapters = build_structure(items)
     lectures = [lec for ch in chapters for lec in ch.lectures]
-    log(f"{len(chapters)} chương, {len(lectures)} bài video")
+    log(t("log_structure", chapters=len(chapters), lectures=len(lectures)))
 
     course_dir = out_root / sanitize_filename(slug)
     course_dir.mkdir(parents=True, exist_ok=True)
@@ -730,11 +735,11 @@ def download_course(url: str, token: str, out_root: Path, langs: list[str], forc
     headline = None
     try:
         details = client.course_details(course["id"])
-        _write_overview(course_dir, host, details)
+        write_overview(course_dir, host, details)
         headline = details.get("headline")
-        log("Đã lưu tổng quan khoá (OVERVIEW.md)")
+        log(t("log_overview_saved"))
     except UdemyError as e:
-        log(f"CẢNH BÁO: không lấy được tổng quan khoá: {e}")
+        log(t("log_overview_failed", err=e))
 
     stats = {lang: {"available": 0, "downloaded": 0, "skipped": 0, "missing": 0, "failed": 0, "auto": 0} for lang in langs}
     tasks = []
@@ -755,7 +760,7 @@ def download_course(url: str, token: str, out_root: Path, langs: list[str], forc
 
     for lang in langs:
         s = stats[lang]
-        log(f"[{lang}] có phụ đề {s['available']}/{len(lectures)} bài ({s['auto']} auto), đã có sẵn {s['skipped']}")
+        log(t("log_captions", lang=lang, available=s["available"], total=len(lectures), auto=s["auto"], skipped=s["skipped"]))
 
     def write_transcript(cap, srt, txt):
         cues = parse_vtt(vtt_fetcher(cap["url"]))
@@ -790,10 +795,10 @@ def download_course(url: str, token: str, out_root: Path, langs: list[str], forc
                 path.parent.mkdir(parents=True, exist_ok=True)
             except (UdemyError, OSError) as e:  # OSError: vd đường dẫn quá dài trên Windows
                 res_stats["failed"] += 1
-                log(f"[file] LỖI {path.name}: {e}")
+                log(t("log_file_error", name=path.name, err=e))
                 continue
             work.append((res_stats, f"[file] {path.name}", lambda u=file_url, p=path: file_fetcher(u, p)))
-        log(f"[file] {res_stats['files']} file đính kèm ({res_stats['links']} link ngoài), đã có sẵn {res_stats['skipped']}")
+        log(t("log_files", files=res_stats["files"], links=res_stats["links"], skipped=res_stats["skipped"]))
 
     done = 0
     progress(done, len(work))
@@ -805,7 +810,7 @@ def download_course(url: str, token: str, out_root: Path, langs: list[str], forc
                 stat["downloaded"] += 1
             except Exception as e:  # 1 bài/file lỗi không được làm hỏng cả khoá
                 stat["failed"] += 1
-                log(f"LỖI {label}: {e}")
+                log(t("log_task_error", label=label, err=e))
             done += 1
             progress(done, len(work))
 
@@ -835,14 +840,15 @@ def download_course(url: str, token: str, out_root: Path, langs: list[str], forc
         from render import render_course
         pages = render_course(course_dir, meta)
         meta["html"] = True
-        log(f"Đã dựng trang đọc trên trình duyệt: {', '.join(pages)}")
+        log(t("log_html_done", pages=", ".join(pages)))
     except Exception as e:  # lỗi dựng HTML không được làm mất dữ liệu đã tải
         meta["html"] = (course_dir / "index.html").exists()
-        log(f"CẢNH BÁO: không dựng được HTML: {e}")
+        log(t("log_html_failed", err=e))
     (course_dir / "course.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
     for lang in langs:
         s = stats[lang]
-        log(f"[{lang}] xong: tải {s['downloaded']}, bỏ qua {s['skipped']}, lỗi {s['failed']}, không có phụ đề {s['missing']}")
+        log(t("log_lang_done", lang=lang, downloaded=s["downloaded"], skipped=s["skipped"], failed=s["failed"], missing=s["missing"]))
     if res_stats:
-        log(f"[file] xong: tải {res_stats['downloaded']}, bỏ qua {res_stats['skipped']}, lỗi {res_stats['failed']}")
+        r = res_stats
+        log(t("log_files_done", downloaded=r["downloaded"], skipped=r["skipped"], failed=r["failed"]))
     return meta

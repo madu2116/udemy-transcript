@@ -5,6 +5,7 @@ import types
 import pytest
 
 from test_udemy import FakeClient, FakeResp, cap, chapter_item, fake_vtt, lecture_item, make_client, run
+from i18n import t
 from udemy import Resource, UdemyError, collect_resources, download_course, fetch_file
 
 
@@ -81,7 +82,7 @@ class ResClient(FakeClient):
 
     def asset_download_url(self, course_id, lecture_id, asset_id):
         if asset_id == 4:
-            raise UdemyError("Udemy không trả link tải cho file này")
+            raise UdemyError(t("no_download_link"))  # như UdemyClient thật
         return f"https://att-c.udemycdn.com/{asset_id}"
 
 
